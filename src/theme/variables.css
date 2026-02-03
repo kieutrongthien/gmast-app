@@ -1,2 +1,63 @@
-/* For information on how to create your own theme, please refer to:
-http://ionicframework.com/docs/theming/ */
+@import url('https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600;700&family=Fira+Sans:wght@300;400;500;600;700&display=swap');
+
+/* Dashboard theme derived from GMast design system */
+:root {
+  --ion-color-primary: #22c55e;
+  --ion-color-primary-rgb: 34, 197, 94;
+  --ion-color-primary-contrast: #020617;
+  --ion-color-primary-contrast-rgb: 2, 6, 23;
+  --ion-color-primary-shade: #1da853;
+  --ion-color-primary-tint: #38cc71;
+
+  --ion-color-secondary: #0f172a;
+  --ion-color-secondary-rgb: 15, 23, 42;
+  --ion-color-secondary-contrast: #f8fafc;
+  --ion-color-secondary-contrast-rgb: 248, 250, 252;
+  --ion-color-secondary-shade: #0d1425;
+  --ion-color-secondary-tint: #252c3e;
+
+  --ion-color-tertiary: #1e293b;
+  --ion-color-tertiary-rgb: 30, 41, 59;
+  --ion-color-tertiary-contrast: #f8fafc;
+  --ion-color-tertiary-contrast-rgb: 248, 250, 252;
+  --ion-color-tertiary-shade: #1a2434;
+  --ion-color-tertiary-tint: #344051;
+
+  --ion-background-color: #020617;
+  --ion-background-color-rgb: 2, 6, 23;
+  --ion-text-color: #f8fafc;
+  --ion-text-color-rgb: 248, 250, 252;
+
+  --dashboard-surface: #0f172a;
+  --dashboard-surface-muted: rgba(15, 23, 42, 0.7);
+  --dashboard-border: rgba(148, 163, 184, 0.2);
+  --dashboard-card-shadow: 0 15px 35px rgba(2, 6, 23, 0.35);
+  --dashboard-success: #22c55e;
+  --dashboard-warning: #f97316;
+  --dashboard-danger: #ef4444;
+  --dashboard-grid-gap: 1rem;
+}
+
+body {
+  font-family: 'Fira Sans', 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  background-color: var(--ion-background-color);
+  color: var(--ion-text-color);
+}
+
+ion-card,
+ion-toolbar,
+ion-header,
+ion-content {
+  --background: transparent;
+}
+
+@media (prefers-color-scheme: light) {
+  :root {
+    --ion-background-color: #f8fafc;
+    --ion-text-color: #0f172a;
+    --dashboard-surface: #ffffff;
+    --dashboard-surface-muted: rgba(248, 250, 252, 0.85);
+    --dashboard-border: rgba(15, 23, 42, 0.08);
+    --dashboard-card-shadow: 0 15px 45px rgba(15, 23, 42, 0.08);
+  }
+}
