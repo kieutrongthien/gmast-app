@@ -9,10 +9,10 @@ import {
 import { fetchFullPendingQueue } from '@/services/messages/pendingMessageClient';
 import type { QueueSnapshot } from '@/types/queue';
 import { backgroundServiceManager, type BackgroundServiceManager } from '@/services/background';
-import { scheduleLocalNotification } from '@/services/notifications/localNotifications';
 import { emitAnalyticsEvent, type AnalyticsPayload } from '@/services/messages/analytics';
+import { backgroundSendNotificationService } from '@/services/notifications/backgroundSendNotificationService';
 
-interface SendStats extends Record<string, number | boolean> {
+export interface SendStats extends Record<string, number | boolean> {
   total: number;
   attempted: number;
   sent: number;
@@ -59,33 +59,26 @@ const summarizeResults = (results: DispatchResult[], total: number, cancelled: b
 };
 
 const notifyStart = async (total: number) => {
-  await scheduleLocalNotification({
-    title: 'Bắt đầu gửi nền',
-    body: total > 0 ? `Đang xử lý ${total} tin nhắn trong hàng đợi.` : 'Không có tin nhắn nào để gửi.',
-    ongoing: true
-  });
+  await backgroundSendNotificationService.showStart(total);
 };
 
 const notifyCompletion = async (stats: SendStats) => {
-  const title = stats.cancelled ? 'Đã dừng gửi nền' : 'Hoàn tất gửi nền';
-  const body = stats.total
-    ? `Đã xử lý ${stats.attempted}/${stats.total} tin nhắn · Gửi thành công ${stats.sent}, bỏ qua ${stats.skipped}.`
-    : 'Không có tin nào để xử lý.';
-  await scheduleLocalNotification({ title, body, ongoing: false });
+  await backgroundSendNotificationService.showCompletion(stats);
+};
+
+const notifyProgress = async (stats: SendStats) => {
+  await backgroundSendNotificationService.updateProgress(stats);
 };
 
 const notifyError = async (error: Error) => {
-  await scheduleLocalNotification({
-    title: 'Gửi nền gặp lỗi',
-    body: error.message ?? 'Không xác định được lỗi.',
-    ongoing: false
-  });
+  await backgroundSendNotificationService.showError(error);
 };
 
 interface BackgroundSendDependencies {
   fetchQueue: () => Promise<QueueSnapshot>;
   serviceManager: BackgroundServiceManager;
   notifyStart: (total: number) => Promise<void>;
+  notifyProgress: (stats: SendStats) => Promise<void>;
   notifyCompletion: (stats: SendStats) => Promise<void>;
   notifyError: (error: Error) => Promise<void>;
   analytics: (event: string, payload?: AnalyticsPayload) => Promise<void> | void;
@@ -95,6 +88,7 @@ const defaultDependencies: BackgroundSendDependencies = {
   fetchQueue: () => fetchFullPendingQueue({ persist: false }),
   serviceManager: backgroundServiceManager,
   notifyStart,
+  notifyProgress,
   notifyCompletion,
   notifyError,
   analytics: emitAnalyticsEvent
@@ -149,9 +143,33 @@ export class BackgroundSendController {
     errorState.value = null;
     this.stopRequested = false;
 
+    let attempted = 0;
+    let sent = 0;
+    let skipped = 0;
+
+    const trackProgress = async (result: DispatchResult) => {
+      attempted += 1;
+      if (result.skipped) {
+        skipped += 1;
+      } else {
+        sent += 1;
+      }
+
+      const snapshot: SendStats = {
+        ...statsState.value,
+        attempted,
+        sent,
+        skipped,
+        cancelled: this.stopRequested
+      };
+      statsState.value = snapshot;
+      await this.deps.notifyProgress(snapshot);
+    };
+
     const dispatcherOptions: SendDispatcherOptions = {
       onDispatch: options.onDispatch,
       onSkip: options.onSkip,
+      onResult: trackProgress,
       isCancelled: () => this.stopRequested
     };
 

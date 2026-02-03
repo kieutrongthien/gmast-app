@@ -16,6 +16,7 @@ export type DispatchHandler = (message: QueueMessage) => Promise<void>;
 export interface SendDispatcherOptions {
   onSkip?: (result: DispatchResult) => Promise<void> | void;
   onDispatch?: (message: QueueMessage) => Promise<void> | void;
+  onResult?: (result: DispatchResult) => Promise<void> | void;
   isCancelled?: () => boolean;
 }
 
@@ -50,16 +51,19 @@ export const dispatchQueueSequentially = async (
       });
       await options.onSkip?.(skipResult);
       results.push(skipResult);
+      await options.onResult?.(skipResult);
       continue;
     }
 
     await options.onDispatch?.(message);
     await handler(message);
-    results.push({
+    const successResult: DispatchResult = {
       message,
       skipped: false,
       status
-    });
+    };
+    results.push(successResult);
+    await options.onResult?.(successResult);
   }
 
   return results;

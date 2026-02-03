@@ -137,7 +137,7 @@ import {
 } from '@ionic/vue';
 import type { RefresherCustomEvent, SegmentChangeEventDetail } from '@ionic/core';
 import { alertCircleOutline, cloudOfflineOutline, refreshOutline, warningOutline } from 'ionicons/icons';
-import { onMounted, computed, ref } from 'vue';
+import { onMounted, computed, ref, onBeforeUnmount } from 'vue';
 import QueueList from '@/components/QueueList.vue';
 import SimSelector from '@/components/SimSelector.vue';
 import { usePendingQueue } from '@/composables/usePendingQueue';
@@ -152,8 +152,11 @@ const {
   lastUpdated,
   usingMock,
   loadQueue,
-  refreshQueue
+  refreshQueue,
+  startAutoRefresh
 } = usePendingQueue();
+
+let stopAutoRefresh: (() => void) | null = null;
 
 const {
   failureCount,
@@ -315,12 +318,12 @@ const handleSegmentChange = (event: CustomEvent<SegmentChangeEventDetail>) => {
 };
 
 const handleRefresh = async (event: RefresherCustomEvent) => {
-  await refreshQueue();
+  await refreshQueue(true);
   event.target.complete();
 };
 
 const handleManualRefresh = async () => {
-  await refreshQueue();
+  await refreshQueue(true);
 };
 
 const handleRetryResultSync = async () => {
@@ -349,8 +352,13 @@ const resultToastButtons = [
 ];
 
 onMounted(() => {
-  loadQueue();
+  loadQueue({ force: true });
   hydrateFailures();
+  stopAutoRefresh = startAutoRefresh();
+});
+
+onBeforeUnmount(() => {
+  stopAutoRefresh?.();
 });
 </script>
 

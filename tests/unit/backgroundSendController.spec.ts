@@ -51,6 +51,7 @@ describe('BackgroundSendController', () => {
     } as any;
 
     const notifyStart = vi.fn(async () => {});
+    const notifyProgress = vi.fn(async () => {});
     const notifyCompletion = vi.fn(async () => {});
     const notifyError = vi.fn(async () => {});
     const analytics = vi.fn(async () => {});
@@ -59,6 +60,7 @@ describe('BackgroundSendController', () => {
       fetchQueue,
       serviceManager,
       notifyStart,
+      notifyProgress,
       notifyCompletion,
       notifyError,
       analytics
@@ -70,10 +72,16 @@ describe('BackgroundSendController', () => {
   });
 
   it('starts dispatch loop and reports completion', async () => {
-    mockedDispatcher.mockResolvedValueOnce([
-      { message: queue[0], skipped: false },
-      { message: queue[1], skipped: true }
-    ]);
+    mockedDispatcher.mockImplementationOnce(async (_queue, _handler, options) => {
+      const results = [
+        { message: queue[0], skipped: false },
+        { message: queue[1], skipped: true }
+      ];
+      for (const result of results) {
+        await options?.onResult?.(result as any);
+      }
+      return results as any;
+    });
 
     const deps = createDeps();
     const controller = new BackgroundSendController(deps as any);
@@ -89,6 +97,7 @@ describe('BackgroundSendController', () => {
       isCancelled: expect.any(Function)
     }));
     expect(onComplete).toHaveBeenCalledWith(expect.any(Array), false);
+    expect(deps.notifyProgress).toHaveBeenCalledTimes(2);
     expect(deps.notifyCompletion).toHaveBeenCalled();
     expect(deps.analytics).toHaveBeenCalledWith('background_send_complete', expect.objectContaining({
       total: queue.length,

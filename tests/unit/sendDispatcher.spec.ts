@@ -71,6 +71,34 @@ describe('dispatchQueueSequentially', () => {
     expect(result[0].skipped).toBe(false);
   });
 
+  it('invokes onResult for both skipped and sent messages', async () => {
+    mockedStatus
+      .mockResolvedValueOnce({
+        messageId: 'skip',
+        state: PreSendState.AlreadyProcessing,
+        canSend: false,
+        rawStatus: 'processing',
+        flags: {},
+        reason: 'Processing'
+      })
+      .mockResolvedValueOnce({
+        messageId: 'send',
+        state: PreSendState.Sendable,
+        canSend: true,
+        rawStatus: 'pending',
+        flags: {}
+      });
+
+    const handler = vi.fn();
+    const onResult = vi.fn();
+
+    await dispatchQueueSequentially([message('skip'), message('send')], handler, { onResult });
+
+    expect(onResult).toHaveBeenCalledTimes(2);
+    expect(onResult).toHaveBeenNthCalledWith(1, expect.objectContaining({ skipped: true }));
+    expect(onResult).toHaveBeenNthCalledWith(2, expect.objectContaining({ skipped: false }));
+  });
+
   it('stops dispatching when cancelled', async () => {
     mockedStatus.mockResolvedValue({
       messageId: '3',

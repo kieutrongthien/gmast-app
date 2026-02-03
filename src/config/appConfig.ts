@@ -39,10 +39,15 @@ export const appConfig = {
       baseDelayMs: toNumber(envSource.VITE_QUEUE_RETRY_DELAY_MS, 400),
       multiplier: toNumber(envSource.VITE_QUEUE_RETRY_BACKOFF, 2)
     },
-    cacheKey: envSource.VITE_QUEUE_CACHE_KEY ?? 'gmast::queue-cache'
+    cacheKey: envSource.VITE_QUEUE_CACHE_KEY ?? 'gmast::queue-cache',
+    refreshIntervalMs: toNumber(envSource.VITE_QUEUE_REFRESH_INTERVAL_MS, 60 * 1000),
+    minRefreshGapMs: toNumber(envSource.VITE_QUEUE_REFRESH_GAP_MS, 10 * 1000)
   },
   results: {
     cacheKey: envSource.VITE_RESULT_CACHE_KEY ?? 'gmast::result-cache'
+  },
+  send: {
+    preferenceKey: envSource.VITE_SEND_PREFERENCES_KEY ?? 'gmast::send-config'
   },
   version: {
     cacheKey: envSource.VITE_VERSION_CACHE_KEY ?? 'gmast::version-check',
