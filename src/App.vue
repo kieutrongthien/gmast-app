@@ -2,7 +2,7 @@
   <ion-app>
     <ion-tabs>
       <ion-router-outlet />
-      <ion-tab-bar slot="bottom">
+      <ion-tab-bar v-if="showTabBar" slot="bottom">
         <ion-tab-button tab="queue" href="/queue">
           <ion-icon :icon="listOutline" />
           <ion-label>{{ t('nav.queue') }}</ion-label>
@@ -42,17 +42,23 @@ import {
 import { App as AppPlugin } from '@capacitor/app';
 import { Capacitor } from '@capacitor/core';
 import { listOutline, phonePortraitOutline, settingsOutline } from 'ionicons/icons';
-import { computed, onMounted, ref } from 'vue';
+import { computed, onMounted, ref, watchEffect } from 'vue';
 import { useI18n } from 'vue-i18n';
+import { useRoute, useRouter } from 'vue-router';
 import VersionGateModal from '@/components/VersionGateModal.vue';
 import {
   ensureStartupPermissions,
   getStartupPermissionDebugSnapshot
 } from '@/services/permissions/startupPermissionService';
+import { authStore } from '@/stores/authStore';
 
 const { t } = useI18n();
+const route = useRoute();
+const router = useRouter();
 const permissionAlertOpen = ref(false);
 const startupPermissionDebugSummary = ref('SIM: not-checked · Notification: not-checked');
+
+const showTabBar = computed(() => authStore.isAuthenticated.value && route.meta.requiresAuth === true);
 
 const permissionAlertMessage = computed(() => {
   return `${t('startupPermission.message')}<br/><br/>Debug: ${startupPermissionDebugSummary.value}`;
@@ -77,6 +83,16 @@ onMounted(async () => {
 
   if (!granted) {
     permissionAlertOpen.value = true;
+  }
+
+  if (!authStore.isAuthenticated.value && route.meta.requiresAuth === true) {
+    await router.replace('/login');
+  }
+});
+
+watchEffect(() => {
+  if (!authStore.isAuthenticated.value && route.meta.requiresAuth === true) {
+    void router.replace('/login');
   }
 });
 </script>

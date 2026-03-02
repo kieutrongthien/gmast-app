@@ -1,16 +1,12 @@
-import type { AxiosRequestConfig } from 'axios';
-import { httpClient } from '@/lib/httpClient';
 import { appConfig } from '@/config/appConfig';
-import { ensureAccessToken, buildAuthorizationHeader } from '@/services/auth/tokenManager';
 import { saveQueueSnapshot, loadQueueSnapshot } from '@/services/messages/queueStorage';
 import { withRetry } from '@/utils/retry';
+import { getSmsSchedules } from '@/services/mobile';
 import type {
   QueueMessage,
   QueueMessagePriority,
   QueueMessageStatus,
   QueueSnapshot,
-  PendingMessageApiRecord,
-  PendingMessageApiResponse,
   QueuePageMeta
 } from '@/types/queue';
 
@@ -24,7 +20,6 @@ export interface FetchFullQueueOptions extends Omit<FetchPendingMessagesOptions,
   maxPages?: number;
 }
 
-const ENDPOINT = '/messages/pending';
 const DEFAULT_MAX_PAGES = 20;
 
 const sanitizePageSize = (value: number): number => {
@@ -104,57 +99,83 @@ const toStatus = (value?: string | number | null): QueueMessageStatus => {
   }
 };
 
-const toTags = (value: PendingMessageApiRecord['tags']): string[] => {
+const toTags = (value: unknown): string[] => {
   if (!Array.isArray(value)) {
     return [];
   }
   return value.filter((item): item is string => typeof item === 'string' && item.trim().length > 0);
 };
 
-const normalizeRecord = (record: PendingMessageApiRecord): QueueMessage => {
+type QueueApiRecord = Record<string, unknown>;
+
+const readString = (record: QueueApiRecord, ...keys: string[]): string | null => {
+  for (const key of keys) {
+    const value = record[key];
+    if (typeof value === 'string' && value.trim().length > 0) {
+      return value;
+    }
+    if (typeof value === 'number' && Number.isFinite(value)) {
+      return String(value);
+    }
+  }
+
+  return null;
+};
+
+const readNumber = (record: QueueApiRecord, ...keys: string[]): number | null => {
+  for (const key of keys) {
+    const value = record[key];
+    if (typeof value === 'number' && Number.isFinite(value)) {
+      return value;
+    }
+    if (typeof value === 'string' && value.trim().length > 0) {
+      const parsed = Number(value);
+      if (Number.isFinite(parsed)) {
+        return parsed;
+      }
+    }
+  }
+
+  return null;
+};
+
+const normalizeRecord = (record: QueueApiRecord): QueueMessage => {
   const now = new Date().toISOString();
-  const createdAt = record.created_at ?? now;
-  const updatedAt = record.updated_at ?? createdAt;
+  const createdAt = readString(record, 'created_at', 'createdAt') ?? now;
+  const updatedAt = readString(record, 'updated_at', 'updatedAt') ?? createdAt;
+  const messageId = readString(record, 'id', 'sms_schedule_id') ?? crypto.randomUUID();
 
   return {
-    id: record.id ?? crypto.randomUUID(),
-    groupUsername: record.group_username ?? null,
-    studentId: record.student_id ?? null,
-    receiver: record.receiver ?? '',
-    title: record.title ?? null,
-    message: record.message ?? '',
-    dedupeKey: record.dedupeKey ?? null,
-    priority: toPriority(record.priority),
-    status: toStatus(record.status),
+    id: messageId,
+    groupUsername: readString(record, 'group_username', 'groupUsername'),
+    studentId: readString(record, 'student_id', 'studentId'),
+    receiver: readString(record, 'receiver', 'phone', 'phone_number') ?? '',
+    title: readString(record, 'title', 'subject'),
+    message: readString(record, 'message', 'content', 'body') ?? '',
+    dedupeKey: readString(record, 'dedupeKey', 'dedupe_key'),
+    priority: toPriority(readNumber(record, 'priority') ?? readString(record, 'priority')),
+    status: toStatus(readNumber(record, 'status') ?? readString(record, 'status')),
     createdAt,
     updatedAt,
-    retryCount: record.retryCount ?? 0,
+    retryCount: readNumber(record, 'retryCount', 'retry_count') ?? 0,
     tags: toTags(record.tags)
   };
 };
 
-const normalizeMeta = (
-  response: PendingMessageApiResponse,
-  fallback: { page: number; pageSize: number }
+const buildMeta = (
+  allItemsCount: number,
+  page: number,
+  pageSize: number
 ): QueuePageMeta => {
-  const meta = response.meta ?? {};
-  const page = meta.page ?? fallback.page;
-  const pageSize = meta.pageSize ?? meta.perPage ?? fallback.pageSize;
-  const totalPages = meta.totalPages ?? meta.total ?? 1;
-  const totalItems = meta.totalItems ?? meta.total ?? response.data.length;
-  const hasNextPage =
-    typeof meta.hasNext === 'boolean'
-      ? meta.hasNext
-      : typeof meta.hasMore === 'boolean'
-      ? meta.hasMore
-      : page < (meta.totalPages ?? totalPages ?? 1);
+  const totalPages = Math.max(1, Math.ceil(allItemsCount / pageSize));
+  const hasNextPage = page < totalPages;
   const fetchedAt = new Date().toISOString();
 
   return {
     page,
     pageSize,
     totalPages,
-    totalItems,
+    totalItems: allItemsCount,
     hasNextPage,
     fetchedAt
   };
@@ -168,22 +189,12 @@ const requestPendingMessages = async (
     throw new Error('VITE_API_BASE_URL is not configured.');
   }
 
-  const authToken = await ensureAccessToken();
-  const headers: AxiosRequestConfig['headers'] = {};
-  const authorization = buildAuthorizationHeader(authToken);
-  if (authorization) {
-    headers.Authorization = authorization;
-  }
-
-  const { data } = await withRetry(() =>
-    httpClient.get<PendingMessageApiResponse>(ENDPOINT, {
-      params: { page, pageSize },
-      headers
-    })
-  );
-
-  const meta = normalizeMeta(data, { page, pageSize });
-  const messages = data.data.map(normalizeRecord);
+  const { items } = await withRetry(() => getSmsSchedules());
+  const normalized = items.map((item) => normalizeRecord(item as QueueApiRecord));
+  const startIndex = Math.max(0, (page - 1) * pageSize);
+  const endIndex = startIndex + pageSize;
+  const messages = normalized.slice(startIndex, endIndex);
+  const meta = buildMeta(normalized.length, page, pageSize);
 
   return {
     messages,

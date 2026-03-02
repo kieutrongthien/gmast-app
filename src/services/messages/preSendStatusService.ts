@@ -1,12 +1,25 @@
 import axios from 'axios';
-import { httpClient } from '@/lib/httpClient';
 import { withRetry } from '@/utils/retry';
 import type { RemoteMessageStatusResponse, PreSendStatusResult } from '@/types/messageStatus';
 import { PreSendState } from '@/types/messageStatus';
-
-const STATUS_ENDPOINT = (messageId: string) => `/messages/${messageId}/status`;
+import { getSmsScheduleDetail } from '@/services/mobile';
 
 const toBoolean = (value?: boolean): boolean => Boolean(value);
+
+const toRemotePayload = (record: Record<string, unknown>): RemoteMessageStatusResponse => {
+  const statusValue =
+    typeof record.status === 'string' || typeof record.status === 'number'
+      ? String(record.status)
+      : 'unknown';
+
+  return {
+    id: typeof record.id === 'string' ? record.id : undefined,
+    status: statusValue,
+    updated_at: typeof record.updated_at === 'string' ? record.updated_at : undefined,
+    updatedAt: typeof record.updatedAt === 'string' ? record.updatedAt : undefined,
+    checked_at: new Date().toISOString()
+  };
+};
 
 const normalizeResponse = (
   messageId: string,
@@ -85,8 +98,9 @@ export const checkPreSendStatus = async (messageId: string): Promise<PreSendStat
   }
 
   try {
-    const { data } = await withRetry(() => httpClient.get<RemoteMessageStatusResponse>(STATUS_ENDPOINT(messageId)));
-    return normalizeResponse(messageId, data);
+    const detail = await withRetry(() => getSmsScheduleDetail(messageId));
+    const payload = toRemotePayload(detail.item);
+    return normalizeResponse(messageId, payload);
   } catch (error) {
     if (axios.isAxiosError(error)) {
       if (error.response?.status === 404) {

@@ -157,7 +157,26 @@ const en = {
     languageSection: 'Language',
     languageLabel: 'App language',
     languageEnglish: 'English',
-    languageKorean: 'Korean'
+    languageKorean: 'Korean',
+    accountSection: 'Account',
+    currentUser: 'Current user',
+    username: 'Username',
+    email: 'Email',
+    role: 'Role',
+    unknownUser: 'Unknown',
+    logout: 'Log out'
+  },
+  auth: {
+    loginTitle: 'Login',
+    loginHeading: 'Sign in',
+    loginDescription: 'Login is required before using the app features.',
+    username: 'Username',
+    password: 'Password',
+    usernamePlaceholder: 'Enter username',
+    passwordPlaceholder: 'Enter password',
+    loginButton: 'Login',
+    missingCredentials: 'Please enter username and password.',
+    loginFailed: 'Unable to login. Please check your credentials.'
   },
   startupPermission: {
     title: 'Permission Required',

@@ -1,10 +1,22 @@
-import { httpClient } from '@/lib/httpClient';
 import { withRetry } from '@/utils/retry';
+import { updateSmsScheduleStatus } from '@/services/mobile';
 import type { DeliveryResultPayload, DeliveryResultResponse } from '@/types/messageResult';
 
-const RESULT_ENDPOINT = (messageId: string) => `/messages/${messageId}/result`;
-
 const DEFAULT_ATTEMPTS = 3;
+
+const toScheduleStatus = (outcome: DeliveryResultPayload['outcome']): 'pending' | 'failed' | 'sent' => {
+  switch (outcome) {
+    case 'sent':
+    case 'delivered':
+      return 'sent';
+    case 'failed':
+    case 'cancelled':
+      return 'failed';
+    case 'queued':
+    default:
+      return 'pending';
+  }
+};
 
 export const reportDeliveryResult = async (
   payload: DeliveryResultPayload,
@@ -14,10 +26,18 @@ export const reportDeliveryResult = async (
     throw new Error('reportDeliveryResult requires messageId');
   }
 
-  const response = await withRetry(
-    () => httpClient.post<DeliveryResultResponse>(RESULT_ENDPOINT(payload.messageId), payload),
+  await withRetry(
+    () =>
+      updateSmsScheduleStatus(payload.messageId, {
+        status: toScheduleStatus(payload.outcome),
+        retry_increment: payload.outcome === 'failed' || payload.outcome === 'cancelled'
+      }),
     { retries: attempts - 1 }
   );
 
-  return response.data;
+  return {
+    success: true,
+    stored: true,
+    messageId: payload.messageId
+  };
 };

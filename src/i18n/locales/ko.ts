@@ -157,7 +157,26 @@ const ko = {
     languageSection: '언어',
     languageLabel: '앱 언어',
     languageEnglish: '영어',
-    languageKorean: '한국어'
+    languageKorean: '한국어',
+    accountSection: '계정',
+    currentUser: '현재 사용자',
+    username: '아이디',
+    email: '이메일',
+    role: '권한',
+    unknownUser: '알 수 없음',
+    logout: '로그아웃'
+  },
+  auth: {
+    loginTitle: '로그인',
+    loginHeading: '로그인',
+    loginDescription: '앱 기능 사용 전 로그인이 필요합니다.',
+    username: '아이디',
+    password: '비밀번호',
+    usernamePlaceholder: '아이디를 입력하세요',
+    passwordPlaceholder: '비밀번호를 입력하세요',
+    loginButton: '로그인',
+    missingCredentials: '아이디와 비밀번호를 입력하세요.',
+    loginFailed: '로그인에 실패했습니다. 계정을 확인하세요.'
   },
   startupPermission: {
     title: '권한 필요',
