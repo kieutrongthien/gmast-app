@@ -47,17 +47,6 @@
         </div>
       </section>
 
-      <section class="kpi-grid">
-        <div v-for="card in kpiCards" :key="card.id" class="kpi-card">
-          <div class="kpi-label">{{ card.label }}</div>
-          <div class="kpi-value">{{ card.value }}</div>
-          <div class="kpi-meta">
-            <span :class="['kpi-trend', card.trendClass]">{{ card.trendLabel }}</span>
-            <span class="kpi-support">{{ card.support }}</span>
-          </div>
-        </div>
-      </section>
-
       <section class="panel primary-panel dashboard-panel-card">
         <div class="panel-header">
           <div>
@@ -180,78 +169,9 @@ const resultToastMessage = computed(() => {
 
 const activeSegment = ref('all');
 
-const totalItems = computed(() => meta.value?.totalItems ?? messages.value.length);
-
-const statusCounts = computed(() => {
-  const counts: Record<string, number> = {
-    pending: 0,
-    processing: 0,
-    failed: 0,
-    sent: 0,
-    unknown: 0
-  };
-  messages.value.forEach((message) => {
-    const key = message.status ?? 'unknown';
-    counts[key] = (counts[key] ?? 0) + 1;
-  });
-  return counts;
+const totalItems = computed(() => {
+  return messages.value.filter(x => x.status === 'pending').length;
 });
-
-const pendingTotal = computed(() => statusCounts.value.pending);
-const processingTotal = computed(() => statusCounts.value.processing);
-const failedTotal = computed(() => statusCounts.value.failed + failureCount.value);
-
-const highPriorityCount = computed(() =>
-  messages.value.filter((message) => message.priority === 'high' || message.priority === 'critical').length
-);
-
-const messageAgeThresholdMs = 30 * 60 * 1000;
-const slaRiskCount = computed(() =>
-  messages.value.filter((message) => Date.now() - Date.parse(message.createdAt) > messageAgeThresholdMs).length
-);
-
-const averageRetryCount = computed(() => {
-  if (!messages.value.length) {
-    return 0;
-  }
-  const total = messages.value.reduce((sum, message) => sum + (message.retryCount ?? 0), 0);
-  return Number((total / messages.value.length).toFixed(1));
-});
-
-const kpiCards = computed(() => [
-  {
-    id: 'pending',
-    label: t('home.kpi.pending.label'),
-    value: pendingTotal.value,
-    trendLabel: t('home.kpi.pending.trend', { count: statusCounts.value.pending }),
-    trendClass: 'is-neutral',
-    support: t('home.kpi.pending.support')
-  },
-  {
-    id: 'processing',
-    label: t('home.kpi.processing.label'),
-    value: processingTotal.value,
-    trendLabel: t('home.kpi.processing.trend', { count: highPriorityCount.value }),
-    trendClass: highPriorityCount.value > 0 ? 'is-warning' : 'is-neutral',
-    support: t('home.kpi.processing.support')
-  },
-  {
-    id: 'failed',
-    label: t('home.kpi.failed.label'),
-    value: failedTotal.value,
-    trendLabel: t('home.kpi.failed.trend', { count: failureCount.value }),
-    trendClass: failedTotal.value > 0 ? 'is-danger' : 'is-positive',
-    support: t('home.kpi.failed.support')
-  },
-  {
-    id: 'sla',
-    label: t('home.kpi.sla.label'),
-    value: slaRiskCount.value,
-    trendLabel: t('home.kpi.sla.trend', { count: averageRetryCount.value }),
-    trendClass: slaRiskCount.value > 0 ? 'is-warning' : 'is-positive',
-    support: t('home.kpi.sla.support')
-  }
-]);
 
 type SegmentFilter = (message: QueueMessage) => boolean;
 interface SegmentDefinition {
@@ -421,61 +341,6 @@ ion-content {
 
 .hero-chip ion-icon {
   margin-right: 0.35rem;
-}
-
-.kpi-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: var(--dashboard-grid-gap);
-  margin-bottom: 2rem;
-}
-
-.kpi-card {
-  padding: 1rem 1.25rem;
-  border-radius: 0.8rem;
-  background: var(--dashboard-surface);
-  border: 1px solid var(--dashboard-border);
-  box-shadow: var(--dashboard-card-shadow);
-}
-
-.kpi-label {
-  font-size: 0.85rem;
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-  margin-bottom: 0.5rem;
-  color: var(--dashboard-text-secondary);
-}
-
-.kpi-value {
-  font-size: 2rem;
-  font-weight: 600;
-  margin: 0;
-}
-
-.kpi-meta {
-  display: flex;
-  justify-content: space-between;
-  align-items: baseline;
-  font-size: 0.85rem;
-  margin-top: 0.35rem;
-  gap: 0.75rem;
-}
-
-.kpi-trend {
-  font-weight: 600;
-  color: var(--dashboard-text-secondary);
-}
-
-.kpi-trend.is-positive {
-  color: var(--dashboard-success);
-}
-
-.kpi-trend.is-warning {
-  color: var(--dashboard-warning);
-}
-
-.kpi-trend.is-danger {
-  color: var(--dashboard-danger);
 }
 
 .panel {
