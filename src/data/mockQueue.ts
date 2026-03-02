@@ -13,9 +13,8 @@ const sampleBodies = [
   'Security info: rotated API secret. Update clients by EOD.'
 ];
 
-const statuses = ['pending', 'queued', 'held', 'sent', 'failed'] as const;
+const statuses = ['pending', 'processing', 'sent', 'failed'] as const;
 const priorities = ['low', 'normal', 'high', 'critical'] as const;
-const channels = ['sms', 'whatsapp', 'telegram', 'email'] as const;
 
 const randomItem = <T>(items: ReadonlyArray<T>): T => items[Math.floor(Math.random() * items.length)];
 
@@ -31,19 +30,18 @@ const buildMessage = (index: number): QueueMessage => {
   const priority = randomItem(priorities);
   return {
     id: `mock-${index}`,
+    groupUsername: `group-${(index % 4) + 1}`,
+    studentId: `S${(1000 + index).toString()}`,
+    receiver: buildPhone(),
+    title: `Thông báo ${index}`,
+    message: randomItem(sampleBodies),
     dedupeKey: index % 3 === 0 ? `batch-${Math.ceil(index / 3)}` : null,
-    to: buildPhone(),
-    body: randomItem(sampleBodies),
-    mediaUrls: [],
-    channel: randomItem(channels),
     priority,
     status: randomItem(statuses),
-    scheduledAt: Math.random() > 0.7 ? buildTimestamp(-index) : null,
     createdAt: buildTimestamp(index + 5),
     updatedAt: buildTimestamp(index),
     retryCount: Math.floor(Math.random() * 3),
-    tags: priority === 'critical' ? ['priority'] : [],
-    metadata: { mock: true }
+    tags: priority === 'critical' ? ['priority'] : []
   };
 };
 

@@ -12,19 +12,18 @@ const mockedDispatcher = vi.mocked(dispatchQueueSequentially);
 
 const sampleMessage = (id: string): QueueMessage => ({
   id,
-  to: '+84123456789',
-  body: 'Xin chào',
-  mediaUrls: [],
-  channel: 'sms',
+  groupUsername: 'group-a',
+  studentId: 'S1001',
+  receiver: '+84123456789',
+  title: 'Nhac lich',
+  message: 'Xin chào',
+  dedupeKey: null,
   priority: 'normal',
   status: 'pending',
-  scheduledAt: null,
   createdAt: new Date().toISOString(),
   updatedAt: new Date().toISOString(),
   retryCount: 0,
-  tags: [],
-  metadata: {},
-  dedupeKey: null
+  tags: []
 });
 
 describe('BackgroundSendController', () => {

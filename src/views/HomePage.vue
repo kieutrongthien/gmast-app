@@ -182,13 +182,11 @@ const scrollTop = ref(0);
 const activeSegment = ref('all');
 
 const totalItems = computed(() => meta.value?.totalItems ?? messages.value.length);
-const totalPages = computed(() => meta.value?.totalPages ?? 1);
 
 const statusCounts = computed(() => {
   const counts: Record<string, number> = {
     pending: 0,
-    queued: 0,
-    held: 0,
+    processing: 0,
     failed: 0,
     sent: 0,
     unknown: 0
@@ -200,8 +198,8 @@ const statusCounts = computed(() => {
   return counts;
 });
 
-const pendingTotal = computed(() => statusCounts.value.pending + statusCounts.value.queued);
-const heldTotal = computed(() => statusCounts.value.held);
+const pendingTotal = computed(() => statusCounts.value.pending);
+const processingTotal = computed(() => statusCounts.value.processing);
 const failedTotal = computed(() => statusCounts.value.failed + failureCount.value);
 
 const highPriorityCount = computed(() =>
@@ -226,14 +224,14 @@ const kpiCards = computed(() => [
     id: 'pending',
     label: 'Tin chờ',
     value: pendingTotal.value,
-    trendLabel: `${statusCounts.value.pending} pending · ${statusCounts.value.queued} queued`,
+    trendLabel: `${statusCounts.value.pending} pending`,
     trendClass: 'is-neutral',
     support: 'Theo dõi SLA 15 phút'
   },
   {
-    id: 'held',
-    label: 'Chờ duyệt',
-    value: heldTotal.value,
+    id: 'processing',
+    label: 'Đang xử lý',
+    value: processingTotal.value,
     trendLabel: `${highPriorityCount.value} ưu tiên cao`,
     trendClass: highPriorityCount.value > 0 ? 'is-warning' : 'is-neutral',
     support: 'Kiểm tra trước vòng gửi'
@@ -268,9 +266,13 @@ const segmentDefinitions: SegmentDefinition[] = [
   {
     id: 'pending',
     label: 'Chờ gửi',
-    filter: (message) => message.status === 'pending' || message.status === 'queued'
+    filter: (message) => message.status === 'pending'
   },
-  { id: 'held', label: 'Held', filter: (message) => message.status === 'held' },
+  {
+    id: 'processing',
+    label: 'Đang xử lý',
+    filter: (message) => message.status === 'processing'
+  },
   { id: 'failed', label: 'Lỗi', filter: (message) => message.status === 'failed' }
 ];
 

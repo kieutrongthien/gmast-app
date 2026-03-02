@@ -14,17 +14,17 @@
             >
               <ion-label class="queue-label">
                 <div class="queue-label__row">
-                  <span class="queue-label__to">{{ message.to }}</span>
+                  <span class="queue-label__to">{{ message.receiver }}</span>
                   <ion-badge :color="statusColor(message.status)">
                     {{ formatStatus(message.status) }}
                   </ion-badge>
                 </div>
                 <p class="queue-label__body">
-                  {{ message.body }}
+                  {{ message.message }}
                 </p>
                 <div class="queue-label__meta">
                   <ion-note>
-                    {{ message.channel.toUpperCase() }} · {{ message.priority.toUpperCase() }}
+                    {{ message.title || 'Không tiêu đề' }} · {{ message.priority.toUpperCase() }}
                   </ion-note>
                   <span class="queue-label__time">{{ formatTimestamp(message.updatedAt) }}</span>
                 </div>
@@ -98,9 +98,8 @@ const hasItems = computed(() => items.value.length > 0);
 const statusColor = (status: QueueMessageStatus): string => {
   switch (status) {
     case 'pending':
-    case 'queued':
       return 'primary';
-    case 'held':
+    case 'processing':
       return 'warning';
     case 'failed':
       return 'danger';
@@ -115,10 +114,8 @@ const formatStatus = (status: QueueMessageStatus): string => {
   switch (status) {
     case 'pending':
       return 'Pending';
-    case 'queued':
-      return 'Queued';
-    case 'held':
-      return 'Held';
+    case 'processing':
+      return 'Processing';
     case 'failed':
       return 'Failed';
     case 'sent':

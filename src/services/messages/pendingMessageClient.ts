@@ -6,7 +6,6 @@ import { saveQueueSnapshot, loadQueueSnapshot } from '@/services/messages/queueS
 import { withRetry } from '@/utils/retry';
 import type {
   QueueMessage,
-  QueueMessageChannel,
   QueueMessagePriority,
   QueueMessageStatus,
   QueueSnapshot,
@@ -39,68 +38,98 @@ const sanitizePageSize = (value: number): number => {
   return Math.min(coerced, appConfig.queue.maxPageSize);
 };
 
-const toChannel = (value?: string): QueueMessageChannel => {
-  switch ((value ?? '').toLowerCase()) {
-    case 'sms':
-    case 'mms':
-    case 'whatsapp':
-    case 'telegram':
-    case 'email':
-    case 'voice':
-      return value!.toLowerCase() as QueueMessageChannel;
-    default:
-      return 'unknown';
+const toPriority = (value?: string | number): QueueMessagePriority => {
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    if (value <= 50) {
+      return 'low';
+    }
+    if (value <= 100) {
+      return 'normal';
+    }
+    if (value <= 200) {
+      return 'high';
+    }
+    return 'critical';
   }
-};
 
-const toPriority = (value?: string): QueueMessagePriority => {
-  switch ((value ?? '').toLowerCase()) {
+  switch ((value ?? '').toString().toLowerCase()) {
+    case '1':
     case 'low':
+      return 'low';
+    case '2':
     case 'normal':
+      return 'normal';
+    case '3':
     case 'high':
+      return 'high';
+    case '4':
     case 'critical':
-      return value!.toLowerCase() as QueueMessagePriority;
+      return 'critical';
     default:
       return 'normal';
   }
 };
 
-const toStatus = (value?: string): QueueMessageStatus => {
-  switch ((value ?? '').toLowerCase()) {
+const toStatus = (value?: string | number): QueueMessageStatus => {
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    switch (value) {
+      case -1:
+        return 'failed';
+      case 0:
+        return 'pending';
+      case 1:
+        return 'sent';
+      case 2:
+        return 'processing';
+      default:
+        return 'unknown';
+    }
+  }
+
+  switch ((value ?? '').toString().toLowerCase()) {
+    case '0':
     case 'pending':
-    case 'queued':
-    case 'held':
+      return 'pending';
+    case '2':
+    case 'processing':
+      return 'processing';
+    case '-1':
     case 'failed':
+      return 'failed';
+    case '1':
     case 'sent':
-      return value!.toLowerCase() as QueueMessageStatus;
+      return 'sent';
     default:
       return 'unknown';
   }
 };
 
-const pickScheduledAt = (record: PendingMessageApiRecord): string | null =>
-  record.schedule?.start ?? record.scheduled_at ?? record.schedule?.end ?? null;
+const toTags = (value: PendingMessageApiRecord['tags']): string[] => {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+  return value.filter((item): item is string => typeof item === 'string' && item.trim().length > 0);
+};
 
 const normalizeRecord = (record: PendingMessageApiRecord): QueueMessage => {
   const now = new Date().toISOString();
-  const createdAt = record.created_at ?? record.createdAt ?? now;
-  const updatedAt = record.updated_at ?? record.updatedAt ?? createdAt;
+  const createdAt = record.created_at ?? now;
+  const updatedAt = record.updated_at ?? createdAt;
 
   return {
-    id: record.id ?? record.messageId ?? crypto.randomUUID(),
-    dedupeKey: record.batchId ?? record.batch_id ?? null,
-    to: record.to ?? record.destination ?? '',
-    body: record.body ?? record.message ?? '',
-    mediaUrls: record.media ?? record.attachments ?? [],
-    channel: toChannel(record.channel),
+    id: record.id ?? crypto.randomUUID(),
+    groupUsername: record.group_username ?? null,
+    studentId: record.student_id ?? null,
+    receiver: record.receiver ?? '',
+    title: record.title ?? null,
+    message: record.message ?? '',
+    dedupeKey: record.dedupeKey ?? null,
     priority: toPriority(record.priority),
     status: toStatus(record.status),
-    scheduledAt: pickScheduledAt(record),
     createdAt,
     updatedAt,
-    retryCount: record.retry_count ?? record.retryCount ?? 0,
-    tags: record.tags ?? record.labels ?? [],
-    metadata: record.metadata ?? {}
+    retryCount: record.retryCount ?? 0,
+    tags: toTags(record.tags)
   };
 };
 

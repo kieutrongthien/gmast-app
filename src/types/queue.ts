@@ -1,30 +1,26 @@
 export type QueueMessageStatus =
+  | 'processing'
   | 'pending'
-  | 'queued'
-  | 'held'
   | 'failed'
   | 'sent'
   | 'unknown';
 
 export type QueueMessagePriority = 'low' | 'normal' | 'high' | 'critical';
 
-export type QueueMessageChannel = 'sms' | 'mms' | 'whatsapp' | 'telegram' | 'email' | 'voice' | 'unknown';
-
 export interface QueueMessage {
   id: string;
-  dedupeKey?: string | null;
-  to: string;
-  body: string;
-  mediaUrls: string[];
-  channel: QueueMessageChannel;
+  groupUsername: string | null;
+  studentId: string | null;
+  receiver: string;
+  title: string | null;
+  message: string;
+  dedupeKey: string | null;
   priority: QueueMessagePriority;
   status: QueueMessageStatus;
-  scheduledAt?: string | null;
   createdAt: string;
   updatedAt: string;
   retryCount: number;
   tags: string[];
-  metadata?: Record<string, unknown>;
 }
 
 export interface QueuePageMeta {
@@ -42,36 +38,20 @@ export interface QueueSnapshot {
   updatedAt: string;
 }
 
-export interface PendingMessageScheduleWindow {
-  start?: string | null;
-  end?: string | null;
-}
-
 export interface PendingMessageApiRecord {
-  id?: string;
-  messageId?: string;
-  batchId?: string;
-  batch_id?: string;
-  destination?: string;
-  to?: string;
-  body?: string;
-  message?: string;
-  media?: string[];
-  attachments?: string[];
-  channel?: string;
-  priority?: string;
-  status?: string;
-  schedule?: PendingMessageScheduleWindow;
-  scheduled_at?: string | null;
-  retry_count?: number;
-  retryCount?: number;
-  tags?: string[];
-  labels?: string[];
-  metadata?: Record<string, unknown>;
-  created_at?: string;
-  createdAt?: string;
-  updated_at?: string;
-  updatedAt?: string;
+  id: string;
+  group_username?: string | null;
+  student_id?: string | null;
+  receiver?: string | null;
+  title?: string | null;
+  message?: string | null;
+  status?: number | string | null;
+  dedupeKey?: string | null;
+  priority?: number | string | null;
+  retryCount?: number | null;
+  tags?: string[] | null;
+  created_at?: string | null;
+  updated_at?: string | null;
 }
 
 export interface PendingMessageApiMeta {

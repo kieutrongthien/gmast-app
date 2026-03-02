@@ -18,10 +18,12 @@ const mockedAnalytics = vi.mocked(emitAnalyticsEvent);
 
 const message = (id: string) => ({
   id,
-  to: '+84123456789',
-  body: 'test',
-  mediaUrls: [],
-  channel: 'sms',
+  groupUsername: 'group-a',
+  studentId: 'S1001',
+  receiver: '+84123456789',
+  title: 'Nhac lich',
+  message: 'test',
+  dedupeKey: null,
   priority: 'normal',
   status: 'pending',
   createdAt: new Date().toISOString(),
