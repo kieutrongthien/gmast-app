@@ -159,6 +159,12 @@ const en = {
     languageEnglish: 'English',
     languageKorean: 'Korean'
   },
+  startupPermission: {
+    title: 'Permission Required',
+    message:
+      'This app requires SIM and notification permissions to operate correctly. Please grant permissions and reopen the app.',
+    exit: 'Exit App'
+  },
   notifications: {
     foreground: {
       channelName: 'Background Message Sending',

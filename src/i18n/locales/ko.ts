@@ -159,6 +159,11 @@ const ko = {
     languageEnglish: '영어',
     languageKorean: '한국어'
   },
+  startupPermission: {
+    title: '권한 필요',
+    message: '앱을 정상적으로 사용하려면 SIM 및 알림 권한이 필요합니다. 권한 허용 후 앱을 다시 실행하세요.',
+    exit: '앱 종료'
+  },
   notifications: {
     foreground: {
       channelName: '백그라운드 메시지 전송',

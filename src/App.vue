@@ -17,6 +17,13 @@
         </ion-tab-button>
       </ion-tab-bar>
     </ion-tabs>
+    <ion-alert
+      :is-open="permissionAlertOpen"
+      :header="t('startupPermission.title')"
+      :message="t('startupPermission.message')"
+      :buttons="permissionAlertButtons"
+      :backdrop-dismiss="false"
+    />
     <version-gate-modal />
   </ion-app>
 </template>
@@ -24,6 +31,7 @@
 <script setup lang="ts">
 import {
   IonApp,
+  IonAlert,
   IonIcon,
   IonLabel,
   IonRouterOutlet,
@@ -31,9 +39,33 @@ import {
   IonTabButton,
   IonTabs
 } from '@ionic/vue';
+import { App as AppPlugin } from '@capacitor/app';
+import { Capacitor } from '@capacitor/core';
 import { listOutline, phonePortraitOutline, settingsOutline } from 'ionicons/icons';
+import { computed, onMounted, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import VersionGateModal from '@/components/VersionGateModal.vue';
+import { ensureStartupPermissions } from '@/services/permissions/startupPermissionService';
 
 const { t } = useI18n();
+const permissionAlertOpen = ref(false);
+
+const permissionAlertButtons = computed(() => [
+  {
+    text: t('startupPermission.exit'),
+    role: 'confirm',
+    handler: () => {
+      if (Capacitor.isNativePlatform()) {
+        AppPlugin.exitApp();
+      }
+    }
+  }
+]);
+
+onMounted(async () => {
+  const granted = await ensureStartupPermissions();
+  if (!granted) {
+    permissionAlertOpen.value = true;
+  }
+});
 </script>
