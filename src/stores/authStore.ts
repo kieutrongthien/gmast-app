@@ -1,7 +1,8 @@
 import { computed, reactive } from 'vue';
 import { Preferences } from '@capacitor/preferences';
 import { setTokenOverride } from '@/services/auth/tokenManager';
-import { getMobileUserInfo, loginMobile } from '@/services/mobile';
+import { getMobileUserInfo, loginMobile, saveMobileFcmToken } from '@/services/mobile';
+import { getLatestFcmToken, waitForFcmToken } from '@/services/notifications/fcmWakeService';
 
 const AUTH_SESSION_KEY = 'gmast::auth-session';
 
@@ -128,6 +129,22 @@ export const loginWithCredentials = async (username: string, password: string): 
 
     const profile = await getMobileUserInfo(session.token);
     state.userProfile = profile.data;
+
+    const immediateToken = getLatestFcmToken();
+    const fcmToken = immediateToken ?? (await waitForFcmToken(5000));
+    if (fcmToken) {
+      try {
+        await saveMobileFcmToken(
+          {
+            token: fcmToken,
+            platform: 'android'
+          },
+          session.token
+        );
+      } catch (error) {
+        console.warn('[Auth] failed to save FCM token', error);
+      }
+    }
   } catch (error) {
     state.error = error instanceof Error ? error.message : String(error);
     throw error;

@@ -8,6 +8,8 @@ import type {
   MobileLoginRequest,
   MobileLoginResponse,
   MobileUserInfoResponse,
+  SaveFcmTokenRequest,
+  SaveFcmTokenResponse,
   SmsScheduleDetailResponse,
   SmsScheduleListResponse,
   SmsScheduleRecord,
@@ -17,6 +19,7 @@ import type {
 
 const LOGIN_ENDPOINT = '/auth/login';
 const USER_INFO_ENDPOINT = '/user';
+const SAVE_FCM_TOKEN_ENDPOINT = '/save-fcm-token';
 const SMS_SCHEDULES_ENDPOINT = '/sms-schedules';
 
 const asRecord = (value: unknown): Record<string, unknown> =>
@@ -238,6 +241,34 @@ export const updateSmsScheduleStatus = async (
     {
       status: payload.status,
       retry_increment: payload.retry_increment
+    },
+    {
+      headers: {
+        ...headers,
+        'Content-Type': 'application/json'
+      }
+    }
+  );
+
+  return {
+    data: asRecord(data)
+  };
+};
+
+export const saveMobileFcmToken = async (
+  payload: SaveFcmTokenRequest,
+  token?: string
+): Promise<SaveFcmTokenResponse> => {
+  if (!payload.token?.trim()) {
+    throw new Error('saveMobileFcmToken requires token');
+  }
+
+  const headers = await resolveAuthHeaders(token);
+  const { data } = await httpClient.post<Record<string, unknown>>(
+    SAVE_FCM_TOKEN_ENDPOINT,
+    {
+      token: payload.token.trim(),
+      platform: payload.platform ?? 'android'
     },
     {
       headers: {

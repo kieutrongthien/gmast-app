@@ -1,5 +1,5 @@
 import { withRetry } from '@/utils/retry';
-import { updateSmsScheduleStatus } from '@/services/mobile';
+import { getSmsScheduleDetail, updateSmsScheduleStatus } from '@/services/mobile';
 import type { DeliveryResultPayload, DeliveryResultResponse } from '@/types/messageResult';
 import type { SmsScheduleStatus } from '@/types/mobileApi';
 import { isHttpError } from '@/lib/httpClient';
@@ -30,49 +30,98 @@ const isInvalidTransition = (error: unknown): boolean => {
   return messageText.toLowerCase().includes('invalid status transition');
 };
 
-const buildTransitionPlans = (targetStatus: SmsScheduleStatus): SmsScheduleStatus[][] => {
-  if (targetStatus === 'sent') {
-    return [
-      ['processing', 'sent'],
-      ['pending', 'processing', 'sent']
-    ];
-  }
+type RuntimeStatus = 'pending' | 'processing' | 'failed' | 'sent' | 'unknown';
 
-  if (targetStatus === 'failed') {
-    return [
-      ['processing', 'failed'],
-      ['pending', 'processing', 'failed']
-    ];
-  }
-
-  if (targetStatus === 'processing') {
-    return [['processing']];
-  }
-
-  return [['pending']];
-};
-
-const applyStatusPlan = async (
-  messageId: string,
-  plan: SmsScheduleStatus[],
-  retryIncrementOnFailure: boolean
-): Promise<void> => {
-  for (let index = 0; index < plan.length; index += 1) {
-    const status = plan[index];
-    const isFinalStep = index === plan.length - 1;
-
-    try {
-      await updateSmsScheduleStatus(messageId, {
-        status,
-        retry_increment: isFinalStep && status === 'failed' ? retryIncrementOnFailure : false
-      });
-    } catch (error) {
-      if (isInvalidTransition(error) && !isFinalStep) {
-        continue;
-      }
-      throw error;
+const normalizeRuntimeStatus = (value: unknown): RuntimeStatus => {
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    switch (value) {
+      case 0:
+        return 'pending';
+      case 2:
+        return 'processing';
+      case -1:
+        return 'failed';
+      case 1:
+        return 'sent';
+      default:
+        return 'unknown';
     }
   }
+
+  const normalized = String(value ?? '').trim().toLowerCase();
+  if (normalized === 'pending' || normalized === '0') {
+    return 'pending';
+  }
+  if (normalized === 'processing' || normalized === '2' || normalized === 'sending') {
+    return 'processing';
+  }
+  if (normalized === 'failed' || normalized === '-1') {
+    return 'failed';
+  }
+  if (normalized === 'sent' || normalized === '1') {
+    return 'sent';
+  }
+  return 'unknown';
+};
+
+const readCurrentStatus = async (messageId: string): Promise<RuntimeStatus> => {
+  const detail = await getSmsScheduleDetail(messageId);
+  return normalizeRuntimeStatus(detail.item.status);
+};
+
+const resolveNextStatus = (current: RuntimeStatus, target: SmsScheduleStatus): SmsScheduleStatus | null => {
+  if (target === 'sent') {
+    if (current === 'sent') {
+      return null;
+    }
+    if (current === 'pending') {
+      return 'processing';
+    }
+    if (current === 'processing') {
+      return 'sent';
+    }
+    if (current === 'failed') {
+      return 'pending';
+    }
+    return 'processing';
+  }
+
+  if (target === 'failed') {
+    if (current === 'failed') {
+      return null;
+    }
+    if (current === 'pending' || current === 'processing') {
+      return 'failed';
+    }
+    if (current === 'sent') {
+      return null;
+    }
+    return 'processing';
+  }
+
+  if (target === 'pending') {
+    if (current === 'pending') {
+      return null;
+    }
+    if (current === 'failed') {
+      return 'pending';
+    }
+    return null;
+  }
+
+  if (target === 'processing') {
+    if (current === 'processing') {
+      return null;
+    }
+    if (current === 'pending') {
+      return 'processing';
+    }
+    if (current === 'failed') {
+      return 'pending';
+    }
+  }
+
+  return null;
 };
 
 const updateStatusWithFallback = async (
@@ -80,26 +129,30 @@ const updateStatusWithFallback = async (
   targetStatus: SmsScheduleStatus,
   retryIncrementOnFailure: boolean
 ): Promise<void> => {
-  const plans = buildTransitionPlans(targetStatus);
-  let lastError: unknown = null;
+  let current = await readCurrentStatus(messageId);
 
-  for (const plan of plans) {
-    try {
-      await applyStatusPlan(messageId, plan, retryIncrementOnFailure);
+  for (let step = 0; step < 8; step += 1) {
+    const next = resolveNextStatus(current, targetStatus);
+    if (!next) {
       return;
+    }
+
+    try {
+      await updateSmsScheduleStatus(messageId, {
+        status: next,
+        retry_increment: next === 'failed' ? retryIncrementOnFailure : false
+      });
+      current = next;
     } catch (error) {
-      lastError = error;
       if (!isInvalidTransition(error)) {
         throw error;
       }
+
+      current = await readCurrentStatus(messageId);
     }
   }
 
-  if (lastError) {
-    throw lastError;
-  }
-
-  throw new Error('Unable to update SMS status due to invalid state transition');
+  throw new Error('Unable to reach target SMS status due to transition constraints');
 };
 
 export const reportDeliveryResult = async (

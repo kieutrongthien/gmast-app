@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "715085129888",
+    "project_id": "gmast-2053c",
+    "storage_bucket": "gmast-2053c.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:715085129888:android:ba86b2d188180e4a4f01c5",
+        "android_client_info": {
+          "package_name": "io.gmast.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAcDDjfh-bNFifwIg0yRL4QEQjhgcIhqeE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

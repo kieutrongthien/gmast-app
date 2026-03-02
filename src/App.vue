@@ -41,11 +41,18 @@ import {
 } from '@ionic/vue';
 import { App as AppPlugin } from '@capacitor/app';
 import { Capacitor } from '@capacitor/core';
+import { Preferences } from '@capacitor/preferences';
 import { listOutline, phonePortraitOutline, settingsOutline } from 'ionicons/icons';
-import { computed, onMounted, ref, watchEffect } from 'vue';
+import { computed, onBeforeUnmount, onMounted, ref, watch, watchEffect } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useRoute, useRouter } from 'vue-router';
 import VersionGateModal from '@/components/VersionGateModal.vue';
+import { appConfig } from '@/config/appConfig';
+import { saveMobileFcmToken } from '@/services/mobile/mobileApiService';
+import {
+  initializeFcmWakeService,
+  subscribeFcmTokenChange
+} from '@/services/notifications/fcmWakeService';
 import {
   ensureStartupPermissions,
   getStartupPermissionDebugSnapshot
@@ -57,6 +64,8 @@ const route = useRoute();
 const router = useRouter();
 const permissionAlertOpen = ref(false);
 const startupPermissionDebugSummary = ref('SIM: not-checked · Notification: not-checked');
+const lastSyncedFcmToken = ref<string | null>(null);
+let unsubscribeFcmTokenChange: (() => void) | null = null;
 
 const showTabBar = computed(() => authStore.isAuthenticated.value && route.meta.requiresAuth === true);
 
@@ -76,7 +85,50 @@ const permissionAlertButtons = computed(() => [
   }
 ]);
 
+const syncFcmTokenToBackend = async (token: string | null): Promise<void> => {
+  if (!token || token === lastSyncedFcmToken.value || !authStore.isAuthenticated.value) {
+    return;
+  }
+
+  const sessionToken = authStore.state.session?.token;
+  if (!sessionToken) {
+    return;
+  }
+
+  try {
+    await saveMobileFcmToken(
+      {
+        token,
+        platform: Capacitor.getPlatform()
+      },
+      sessionToken
+    );
+
+    lastSyncedFcmToken.value = token;
+  } catch (error) {
+    console.warn('[App] failed to sync refreshed FCM token', error);
+  }
+};
+
+const persistApiBaseUrlForNativeWakeWorker = async (): Promise<void> => {
+  const baseUrl = appConfig.apiBaseUrl?.trim();
+  if (!baseUrl) {
+    return;
+  }
+
+  try {
+    await Preferences.set({
+      key: 'gmast::api-base-url',
+      value: baseUrl
+    });
+  } catch (error) {
+    console.warn('[App] failed to persist api base url for wake worker', error);
+  }
+};
+
 onMounted(async () => {
+  await persistApiBaseUrlForNativeWakeWorker();
+
   const granted = await ensureStartupPermissions();
   const debug = getStartupPermissionDebugSnapshot();
   startupPermissionDebugSummary.value = debug.summary;
@@ -88,7 +140,30 @@ onMounted(async () => {
   if (!authStore.isAuthenticated.value && route.meta.requiresAuth === true) {
     await router.replace('/login');
   }
+
+  await initializeFcmWakeService();
+
+  unsubscribeFcmTokenChange = subscribeFcmTokenChange((token) => {
+    void syncFcmTokenToBackend(token);
+  });
 });
+
+onBeforeUnmount(() => {
+  unsubscribeFcmTokenChange?.();
+  unsubscribeFcmTokenChange = null;
+});
+
+watch(
+  () => authStore.isAuthenticated.value,
+  (isAuthenticated) => {
+    if (isAuthenticated) {
+      return;
+    }
+
+    lastSyncedFcmToken.value = null;
+  },
+  { immediate: true }
+);
 
 watchEffect(() => {
   if (!authStore.isAuthenticated.value && route.meta.requiresAuth === true) {

@@ -41,3 +41,12 @@ export interface SmsScheduleStatusUpdateRequest {
 export interface SmsScheduleStatusUpdateResponse {
   data: Record<string, unknown>;
 }
+
+export interface SaveFcmTokenRequest {
+  token: string;
+  platform?: string;
+}
+
+export interface SaveFcmTokenResponse {
+  data: Record<string, unknown>;
+}

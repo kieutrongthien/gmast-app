@@ -135,13 +135,11 @@ import {
 } from '@ionic/vue';
 import type { RefresherCustomEvent, SelectChangeEventDetail } from '@ionic/core';
 import { alertCircleOutline, cloudOfflineOutline, refreshOutline, warningOutline } from 'ionicons/icons';
-import { onMounted, computed, ref, onBeforeUnmount, watch } from 'vue';
+import { onMounted, computed, ref, onBeforeUnmount } from 'vue';
 import { useI18n } from 'vue-i18n';
 import QueueList from '@/components/QueueList.vue';
 import { usePendingQueue } from '@/composables/usePendingQueue';
 import { useResultSync } from '@/composables/useResultSync';
-import { useBackgroundSend } from '@/composables/useBackgroundSend';
-import { dispatchQueuedMessage } from '@/services/messages/messageDispatchService';
 import type { QueueMessage } from '@/types/queue';
 
 const { t } = useI18n();
@@ -159,9 +157,6 @@ const {
 } = usePendingQueue();
 
 let stopAutoRefresh: (() => void) | null = null;
-const autoDispatchSignature = ref('');
-
-const { running: sendingInBackground, startBackgroundSend } = useBackgroundSend();
 
 const {
   failureCount,
@@ -335,44 +330,6 @@ const handleToastDismiss = () => {
   dismissToast();
 };
 
-const buildSendableQueue = (): QueueMessage[] =>
-  messages.value.filter((message) => message.status === 'pending' || message.status === 'failed');
-
-const buildQueueSignature = (queue: QueueMessage[]): string =>
-  queue
-    .map((item) => item.id)
-    .sort()
-    .join('|');
-
-const maybeStartBackgroundDispatch = async (): Promise<void> => {
-  if (loading.value || sendingInBackground.value) {
-    return;
-  }
-
-  const sendableQueue = buildSendableQueue();
-  if (!sendableQueue.length) {
-    autoDispatchSignature.value = '';
-    return;
-  }
-
-  const nextSignature = buildQueueSignature(sendableQueue);
-  if (nextSignature === autoDispatchSignature.value) {
-    return;
-  }
-
-  autoDispatchSignature.value = nextSignature;
-
-  try {
-    await startBackgroundSend({
-      queue: sendableQueue,
-      handler: dispatchQueuedMessage
-    });
-  } catch (error) {
-    autoDispatchSignature.value = '';
-    console.warn('[HomePage] auto background dispatch failed', error);
-  }
-};
-
 const resultToastButtons = [
   {
     text: t('common.retry'),
@@ -391,20 +348,10 @@ const resultToastButtons = [
 ];
 
 onMounted(() => {
-  void loadQueue({ force: true }).then(() => {
-    void maybeStartBackgroundDispatch();
-  });
+  void loadQueue({ force: true });
   hydrateFailures();
   stopAutoRefresh = startAutoRefresh();
 });
-
-watch(
-  [messages, loading, sendingInBackground],
-  () => {
-    void maybeStartBackgroundDispatch();
-  },
-  { deep: false }
-);
 
 onBeforeUnmount(() => {
   stopAutoRefresh?.();
