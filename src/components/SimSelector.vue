@@ -1,13 +1,11 @@
 <template>
   <section class="sim-selector-card">
-    <ion-card>
-      <ion-card-header>
-        <ion-card-title>Chọn SIM cho đợt gửi</ion-card-title>
-        <ion-card-subtitle>
-          {{ selectionSummary }}
-        </ion-card-subtitle>
-      </ion-card-header>
-      <ion-card-content>
+    <div class="sim-selector-surface">
+      <header class="sim-selector-header">
+        <h3>Chọn SIM cho đợt gửi</h3>
+        <p>{{ selectionSummary }}</p>
+      </header>
+      <div class="sim-selector-content">
         <div class="mode-row">
           <ion-segment
             :value="mode"
@@ -91,8 +89,8 @@
         <ion-note color="medium" v-if="lastFetchedAt" class="fetched-at">
           Cập nhật lúc {{ fetchedLabel }}
         </ion-note>
-      </ion-card-content>
-    </ion-card>
+      </div>
+    </div>
   </section>
   <sim-inventory-sheet
     :is-open="inventorySheetOpen"
@@ -113,11 +111,6 @@
 <script setup lang="ts">
 import {
   IonButton,
-  IonCard,
-  IonCardContent,
-  IonCardHeader,
-  IonCardSubtitle,
-  IonCardTitle,
   IonIcon,
   IonItem,
   IonLabel,
@@ -224,6 +217,43 @@ onMounted(() => {
 <style scoped>
 .sim-selector-card {
   margin-bottom: 1rem;
+  --sim-card-bg: var(--dashboard-surface, var(--ion-card-background, #0f172a));
+  --sim-card-text: var(--ion-text-color, #f8fafc);
+  --sim-card-text-muted: var(--dashboard-text-secondary, var(--ion-color-step-600, #94a3b8));
+  --sim-card-border: var(--dashboard-border, var(--ion-color-step-200, rgba(148, 163, 184, 0.25)));
+  --sim-item-bg: var(--dashboard-surface-muted, rgba(15, 23, 42, 0.7));
+  --sim-warning-bg: rgba(var(--ion-color-warning-rgb, 245, 158, 11), 0.2);
+  --sim-warning-text: var(--ion-color-warning-shade, #b45309);
+  --sim-muted-bg: rgba(148, 163, 184, 0.14);
+  background: var(--sim-card-bg);
+  color: var(--sim-card-text);
+  border: 1px solid var(--sim-card-border);
+  border-radius: 1rem;
+  overflow: hidden;
+}
+
+.sim-selector-surface {
+  display: flex;
+  flex-direction: column;
+}
+
+.sim-selector-header {
+  padding: 1rem 1rem 0.5rem;
+}
+
+.sim-selector-header h3 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.sim-selector-header p {
+  margin: 0.35rem 0 0;
+  font-size: 0.9rem;
+  color: var(--sim-card-text-muted);
+}
+
+.sim-selector-content {
+  padding: 0.5rem 1rem 1rem;
 }
 
 .mode-row {
@@ -240,12 +270,15 @@ onMounted(() => {
   gap: 0.5rem;
   font-size: 0.9rem;
   margin-bottom: 0.5rem;
+  color: var(--sim-card-text-muted);
 }
 
 .slot-list ion-item {
   --padding-start: 0.5rem;
   --padding-end: 0.25rem;
-  border: 1px solid var(--ion-color-step-200);
+  --background: var(--sim-item-bg);
+  --color: var(--sim-card-text);
+  border: 1px solid var(--sim-card-border);
   border-radius: 0.5rem;
   margin-bottom: 0.5rem;
 }
@@ -258,7 +291,7 @@ onMounted(() => {
 .slot-meta {
   margin: 0.2rem 0 0;
   font-size: 0.85rem;
-  color: var(--ion-color-step-600);
+  color: var(--sim-card-text-muted);
 }
 
 .slot-state {
@@ -278,13 +311,13 @@ onMounted(() => {
 }
 
 .notice-warning {
-  background: rgba(255, 206, 86, 0.2);
-  color: #b26a00;
+  background: var(--sim-warning-bg);
+  color: var(--sim-warning-text);
 }
 
 .notice-muted {
-  background: var(--ion-color-step-100);
-  color: var(--ion-color-step-700);
+  background: var(--sim-muted-bg);
+  color: var(--sim-card-text-muted);
 }
 
 .notice p {
@@ -296,5 +329,6 @@ onMounted(() => {
   display: block;
   margin-top: 0.5rem;
   font-size: 0.8rem;
+  color: var(--sim-card-text-muted);
 }
 </style>

@@ -11,7 +11,7 @@
       </ion-toolbar>
     </ion-header>
 
-    <ion-content :fullscreen="true" :scroll-events="true" @ionScroll="handleScroll">
+    <ion-content :fullscreen="true">
       <ion-refresher slot="fixed" @ionRefresh="handleRefresh">
         <ion-refresher-content
           pulling-text="Kéo để làm mới"
@@ -63,22 +63,27 @@
           <div class="panel-header">
             <div>
               <p class="panel-eyebrow">Hàng đợi ưu tiên</p>
-              <h2>Danh sách tin nhắn</h2>
+              <div class="panel-title-row">
+                <h2>Danh sách tin nhắn</h2>
+                <ion-select
+                  :value="activeSegment"
+                  class="queue-filter-select"
+                  interface="popover"
+                  label="Lọc trạng thái"
+                  label-placement="stacked"
+                  @ionChange="handleFilterChange"
+                >
+                  <ion-select-option v-for="tab in queueTabs" :key="tab.id" :value="tab.id">
+                    {{ tab.label }} ({{ tab.count }})
+                  </ion-select-option>
+                </ion-select>
+              </div>
             </div>
             <div class="panel-updated">
               <ion-icon :icon="alertCircleOutline" />
               <span>Cập nhật {{ lastUpdatedLabel }}</span>
             </div>
           </div>
-
-          <ion-segment :value="activeSegment" class="queue-tabs" @ionChange="handleSegmentChange">
-            <ion-segment-button v-for="tab in queueTabs" :key="tab.id" :value="tab.id">
-              <ion-label>
-                <span class="tab-label">{{ tab.label }}</span>
-                <span class="tab-count">{{ tab.count }}</span>
-              </ion-label>
-            </ion-segment-button>
-          </ion-segment>
 
           <div class="queue-notes" v-if="hasResultFailures">
             <ion-chip color="danger" button @click="handleRetryResultSync">
@@ -89,7 +94,6 @@
 
           <queue-list
             :items="filteredMessages"
-            :scroll-top="scrollTop"
             class="queue-list-section"
           />
         </div>
@@ -128,14 +132,14 @@ import {
   IonPage,
   IonRefresher,
   IonRefresherContent,
-  IonSegment,
-  IonSegmentButton,
+  IonSelect,
+  IonSelectOption,
   IonSpinner,
   IonTitle,
   IonToast,
   IonToolbar
 } from '@ionic/vue';
-import type { RefresherCustomEvent, SegmentChangeEventDetail } from '@ionic/core';
+import type { RefresherCustomEvent, SelectChangeEventDetail } from '@ionic/core';
 import { alertCircleOutline, cloudOfflineOutline, refreshOutline, warningOutline } from 'ionicons/icons';
 import { onMounted, computed, ref, onBeforeUnmount } from 'vue';
 import QueueList from '@/components/QueueList.vue';
@@ -178,7 +182,6 @@ const resultToastMessage = computed(() => {
   return `${failureCount.value} kết quả chưa đồng bộ. Thử lại nhé?`;
 });
 
-const scrollTop = ref(0);
 const activeSegment = ref('all');
 
 const totalItems = computed(() => meta.value?.totalItems ?? messages.value.length);
@@ -309,12 +312,7 @@ const lastUpdatedLabel = computed(() => {
   return `${diffHours} giờ trước`;
 });
 
-const handleScroll = (event: CustomEvent) => {
-  const detail = event.detail as { scrollTop?: number };
-  scrollTop.value = detail?.scrollTop ?? 0;
-};
-
-const handleSegmentChange = (event: CustomEvent<SegmentChangeEventDetail>) => {
+const handleFilterChange = (event: CustomEvent<SelectChangeEventDetail>) => {
   const next = event.detail.value as string;
   activeSegment.value = next;
 };
@@ -496,6 +494,8 @@ ion-content {
   background: var(--dashboard-surface-muted);
   border: 1px solid var(--dashboard-border);
   box-shadow: var(--dashboard-card-shadow);
+  min-width: 0;
+  overflow-x: hidden;
 }
 
 .panel-header {
@@ -518,6 +518,20 @@ ion-content {
   margin: 0.15rem 0 0;
 }
 
+.panel-title-row {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.queue-filter-select {
+  min-width: 210px;
+  max-width: min(280px, 100%);
+  --highlight-color-focused: var(--dashboard-success);
+}
+
 .panel-updated {
   display: flex;
   align-items: center;
@@ -526,43 +540,13 @@ ion-content {
   color: var(--dashboard-text-secondary);
 }
 
-.queue-tabs {
-  margin-bottom: 1rem;
-  border-radius: 999px;
-  background: rgba(15, 23, 42, 0.6);
-}
-
-.queue-tabs ion-segment-button {
-  --background: transparent;
-  --color-checked: var(--dashboard-success);
-  --indicator-color: rgba(34, 197, 94, 0.15);
-  min-height: 48px;
-}
-
-.queue-tabs ion-label {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  width: 100%;
-  font-weight: 500;
-}
-
-.tab-label {
-  font-size: 0.95rem;
-}
-
-.tab-count {
-  font-size: 0.85rem;
-  color: rgba(248, 250, 252, 0.75);
-  padding-left: 0.35rem;
-}
-
 .queue-notes {
   margin-bottom: 1rem;
 }
 
 .queue-list-section {
-  min-height: 45vh;
+  height: clamp(320px, 52vh, 640px);
+  min-height: 320px;
 }
 
 .sidebar {
@@ -593,6 +577,16 @@ ion-content {
   .dashboard-hero,
   .panel {
     padding: 1.25rem;
+  }
+
+  .panel-title-row {
+    align-items: stretch;
+  }
+
+  .queue-filter-select {
+    min-width: 0;
+    width: 100%;
+    max-width: 100%;
   }
 }
 </style>

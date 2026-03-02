@@ -1,5 +1,5 @@
 <template>
-  <div class="queue-list" ref="containerRef">
+  <div class="queue-list" ref="containerRef" @scroll="handleScroll">
     <template v-if="hasItems">
       <div
         class="queue-virtual-track"
@@ -56,10 +56,6 @@ const props = defineProps({
     type: Array as () => QueueMessage[],
     required: true
   },
-  scrollTop: {
-    type: Number,
-    default: 0
-  },
   rowHeight: {
     type: Number,
     default: 92
@@ -70,15 +66,16 @@ const props = defineProps({
   }
 });
 
-const { items, scrollTop } = toRefs(props);
+const { items } = toRefs(props);
 const containerRef = ref<HTMLElement | null>(null);
 const viewportHeight = ref(600);
+const internalScrollTop = ref(0);
 let resizeObserver: ResizeObserver | null = null;
 
 const totalHeight = computed(() => items.value.length * props.rowHeight);
 
 const startIndex = computed(() => {
-  const index = Math.floor(scrollTop.value / props.rowHeight) - props.overscan;
+  const index = Math.floor(internalScrollTop.value / props.rowHeight) - props.overscan;
   return Math.max(0, index);
 });
 
@@ -94,6 +91,11 @@ const visibleItems = computed(() => items.value.slice(startIndex.value, endIndex
 const topPadding = computed(() => startIndex.value * props.rowHeight);
 
 const hasItems = computed(() => items.value.length > 0);
+
+const handleScroll = (event: Event) => {
+  const target = event.target as HTMLElement | null;
+  internalScrollTop.value = target?.scrollTop ?? 0;
+};
 
 const statusColor = (status: QueueMessageStatus): string => {
   switch (status) {
@@ -181,6 +183,9 @@ watch(
 .queue-list {
   position: relative;
   width: 100%;
+  height: 100%;
+  overflow-y: auto;
+  overflow-x: hidden;
 }
 
 .queue-virtual-track {
