@@ -1,42 +1,42 @@
 <template>
   <ion-page>
-    <ion-header :translucent="true">
-      <ion-toolbar>
-        <ion-title>{{ t('auth.loginTitle') }}</ion-title>
-      </ion-toolbar>
-    </ion-header>
-
     <ion-content :fullscreen="true">
-      <section class="login-content dashboard-panel-card">
-        <h2>{{ t('auth.loginHeading') }}</h2>
-        <p>{{ t('auth.loginDescription') }}</p>
+      <section class="login-screen">
+        <div class="login-panel-wrap">
+          <img class="login-logo" src="/favicon.png" alt="GMAST logo" />
 
-        <ion-item class="field-item" lines="full">
-          <ion-label position="stacked">{{ t('auth.username') }}</ion-label>
-          <ion-input
-            v-model="username"
-            autocomplete="username"
-            inputmode="text"
-            :placeholder="t('auth.usernamePlaceholder')"
-          />
-        </ion-item>
+          <section class="login-content dashboard-panel-card">
+            <h2>{{ t('auth.loginHeading') }}</h2>
+            <p>{{ t('auth.loginDescription') }}</p>
 
-        <ion-item class="field-item" lines="full">
-          <ion-label position="stacked">{{ t('auth.password') }}</ion-label>
-          <ion-input
-            v-model="password"
-            type="password"
-            autocomplete="current-password"
-            :placeholder="t('auth.passwordPlaceholder')"
-          />
-        </ion-item>
+            <ion-item class="field-item" lines="full">
+              <ion-label position="stacked">{{ t('auth.username') }}</ion-label>
+              <ion-input
+                v-model="username"
+                autocomplete="username"
+                inputmode="text"
+                :placeholder="t('auth.usernamePlaceholder')"
+              />
+            </ion-item>
 
-        <p v-if="errorMessage" class="error-message">{{ errorMessage }}</p>
+            <ion-item class="field-item" lines="full">
+              <ion-label position="stacked">{{ t('auth.password') }}</ion-label>
+              <ion-input
+                v-model="password"
+                type="password"
+                autocomplete="current-password"
+                :placeholder="t('auth.passwordPlaceholder')"
+              />
+            </ion-item>
 
-        <ion-button expand="block" :disabled="authLoading" @click="handleLogin">
-          <ion-spinner v-if="authLoading" name="crescent" slot="start" />
-          {{ t('auth.loginButton') }}
-        </ion-button>
+            <p v-if="errorMessage" class="error-message">{{ errorMessage }}</p>
+
+            <ion-button expand="block" :disabled="authLoading" @click="handleLogin">
+              <ion-spinner v-if="authLoading" name="crescent" slot="start" />
+              {{ t('auth.loginButton') }}
+            </ion-button>
+          </section>
+        </div>
       </section>
     </ion-content>
   </ion-page>
@@ -47,14 +47,11 @@ import { computed, ref } from 'vue';
 import {
   IonButton,
   IonContent,
-  IonHeader,
   IonInput,
   IonItem,
   IonLabel,
   IonPage,
-  IonSpinner,
-  IonTitle,
-  IonToolbar
+  IonSpinner
 } from '@ionic/vue';
 import { useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
@@ -89,12 +86,41 @@ const handleLogin = async (): Promise<void> => {
 
 <style scoped>
 ion-content {
-  --padding-bottom: calc(1rem + var(--app-safe-area-bottom, 0px));
+  --padding-bottom: 0;
+}
+
+.login-screen {
+  min-height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  padding-bottom: calc(1rem + var(--app-safe-area-bottom, 0px));
+}
+
+.login-panel-wrap {
+  position: relative;
+  width: min(100%, 420px);
+}
+
+.login-logo {
+  position: absolute;
+  left: 50%;
+  top: 0;
+  transform: translate(-50%, -120%);
+  width: 88px;
+  height: 88px;
+  border-radius: 1rem;
+  object-fit: cover;
+  box-shadow: var(--dashboard-card-shadow);
+  z-index: 2;
 }
 
 .login-content {
   padding: 1rem;
-  margin: 1rem;
+  padding-top: 3.4rem;
+  margin: 0;
+  width: 100%;
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
@@ -106,7 +132,6 @@ ion-content {
 
 .login-content p {
   margin: 0;
-  color: var(--dashboard-text-secondary);
 }
 
 .field-item {
@@ -118,8 +143,8 @@ ion-content {
 }
 
 @media (max-width: 640px) {
-  .login-content {
-    margin: 0.75rem;
+  .login-screen {
+    padding: 0.75rem;
   }
 }
 </style>

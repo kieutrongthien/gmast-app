@@ -7,36 +7,45 @@
     </ion-header>
 
     <ion-content :fullscreen="true">
-      <section class="setting-content dashboard-panel-card">
-        <h2>{{ t('setting.heading') }}</h2>
-        <p>{{ t('setting.description') }}</p>
+      <section class="setting-content">
+        <div class="dashboard-panel-card">
+          <h2>{{ t('setting.heading') }}</h2>
+          <p>{{ t('setting.description') }}</p>
 
-        <div class="setting-group">
-          <p class="setting-group-title">{{ t('setting.languageSection') }}</p>
-          <ion-select
-            :value="currentLocale"
-            class="language-select"
-            interface="popover"
-            :label="t('setting.languageLabel')"
-            label-placement="stacked"
-            @ionChange="handleLocaleChange"
-          >
-            <ion-select-option value="en">{{ t('setting.languageEnglish') }}</ion-select-option>
-            <ion-select-option value="ko">{{ t('setting.languageKorean') }}</ion-select-option>
-          </ion-select>
-        </div>
-
-        <div class="setting-group">
-          <p class="setting-group-title">{{ t('setting.accountSection') }}</p>
-          <div class="account-meta">
-            <p><strong>{{ t('setting.currentUser') }}:</strong> {{ displayName }}</p>
-            <p><strong>{{ t('setting.username') }}:</strong> {{ displayUsername }}</p>
-            <p><strong>{{ t('setting.email') }}:</strong> {{ displayEmail }}</p>
-            <p><strong>{{ t('setting.role') }}:</strong> {{ displayRole }}</p>
+          <div class="setting-group">
+            <ion-select
+              :value="currentLocale"
+              class="language-select"
+              interface="popover"
+              :label="t('setting.languageLabel')"
+              label-placement="stacked"
+              @ionChange="handleLocaleChange"
+            >
+              <ion-select-option value="en">{{ t('setting.languageEnglish') }}</ion-select-option>
+              <ion-select-option value="ko">{{ t('setting.languageKorean') }}</ion-select-option>
+            </ion-select>
           </div>
-          <ion-button color="medium" fill="outline" @click="handleLogout">
-            {{ t('setting.logout') }}
-          </ion-button>
+
+          <div class="setting-group">
+            <ion-input
+              readonly
+              label="Display Name"
+              :value="displayName"
+              label-placement="stacked"
+            />
+            <ion-input
+              readonly
+              label="Username"
+              :value="displayUsername"
+              label-placement="stacked"
+            />
+          </div>
+          
+          <div class="setting-group">
+            <ion-button expand="block" color="danger" fill="outline" @click="handleLogout">
+              {{ t('setting.logout') }}
+            </ion-button>
+          </div>
         </div>
       </section>
     </ion-content>
@@ -53,7 +62,8 @@ import {
   IonSelect,
   IonSelectOption,
   IonTitle,
-  IonToolbar
+  IonToolbar,
+  IonInput
 } from '@ionic/vue';
 import type { SelectChangeEventDetail } from '@ionic/core';
 import { useI18n } from 'vue-i18n';
@@ -101,24 +111,6 @@ const displayUsername = computed(() => {
   );
 });
 
-const displayEmail = computed(() => {
-  return (
-    pickString(profile.value.email)
-    ?? pickString(profile.value.mail)
-    ?? pickString(profile.value.user_email)
-    ?? fallbackText.value
-  );
-});
-
-const displayRole = computed(() => {
-  return (
-    pickString(profile.value.role)
-    ?? pickString(profile.value.role_name)
-    ?? pickString(profile.value.user_role)
-    ?? fallbackText.value
-  );
-});
-
 const handleLocaleChange = async (event: CustomEvent<SelectChangeEventDetail>) => {
   const value = event.detail.value;
   if (value !== 'en' && value !== 'ko') {
@@ -140,8 +132,11 @@ ion-content {
 }
 
 .setting-content {
+  padding: 1.5rem 1rem;
+}
+
+.setting-content .dashboard-panel-card {
   padding: 1rem;
-  margin: 1rem;
 }
 
 .setting-content h2 {
@@ -171,17 +166,7 @@ ion-content {
 }
 
 .language-select {
-  max-width: 280px;
+  max-width: 100%;
   --highlight-color-focused: var(--dashboard-success);
-}
-
-@media (max-width: 640px) {
-  .setting-content {
-    margin: 0.75rem;
-  }
-
-  .language-select {
-    max-width: 100%;
-  }
 }
 </style>

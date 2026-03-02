@@ -271,7 +271,7 @@ onMounted(() => {
 .mode-row ion-segment-button {
   --color: var(--sim-card-text-muted);
   --color-checked: var(--sim-card-text);
-  --background-checked: rgba(var(--ion-color-primary-rgb, 34, 197, 94), 0.2);
+  --background-checked: rgba(var(--ion-color-primary-rgb, 37, 99, 235), 0.2);
   --indicator-color: transparent;
   min-height: 40px;
 }

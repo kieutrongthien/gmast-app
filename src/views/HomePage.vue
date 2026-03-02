@@ -364,7 +364,7 @@ ion-content {
   --padding-bottom: calc(2rem + var(--app-safe-area-bottom, 0px));
   --padding-start: clamp(1rem, 4vw, 3rem);
   --padding-end: clamp(1rem, 4vw, 3rem);
-  background: radial-gradient(circle at top left, rgba(34, 197, 94, 0.25), transparent 45%),
+  background: radial-gradient(circle at top left, rgba(var(--ion-color-primary-rgb, 37, 99, 235), 0.25), transparent 45%),
     var(--ion-background-color);
 }
 
@@ -374,7 +374,7 @@ ion-content {
   flex-wrap: wrap;
   gap: 1.5rem;
   padding: 1.5rem;
-  border-radius: 1.25rem;
+  border-radius: 0.95rem;
   background: var(--dashboard-surface);
   border: 1px solid var(--dashboard-border);
   box-shadow: var(--dashboard-card-shadow);
@@ -432,7 +432,7 @@ ion-content {
 
 .kpi-card {
   padding: 1rem 1.25rem;
-  border-radius: 1rem;
+  border-radius: 0.8rem;
   background: var(--dashboard-surface);
   border: 1px solid var(--dashboard-border);
   box-shadow: var(--dashboard-card-shadow);
