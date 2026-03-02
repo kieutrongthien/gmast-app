@@ -32,10 +32,20 @@
   --dashboard-surface-muted: rgba(15, 23, 42, 0.7);
   --dashboard-border: rgba(148, 163, 184, 0.2);
   --dashboard-card-shadow: 0 15px 35px rgba(2, 6, 23, 0.35);
+  --dashboard-text-secondary: rgba(148, 163, 184, 0.95);
   --dashboard-success: #22c55e;
   --dashboard-warning: #f97316;
   --dashboard-danger: #ef4444;
   --dashboard-grid-gap: 1rem;
+}
+
+.dashboard-panel-card {
+  background: var(--dashboard-surface-muted);
+  border: 1px solid var(--dashboard-border);
+  border-radius: 1.25rem;
+  box-shadow: var(--dashboard-card-shadow);
+  min-width: 0;
+  overflow-x: hidden;
 }
 
 body {
@@ -51,6 +61,13 @@ ion-content {
   --background: transparent;
 }
 
+ion-button,
+ion-segment-button,
+ion-tab-button {
+  --border-radius: 1rem;
+  border-radius: 1rem;
+}
+
 @media (prefers-color-scheme: light) {
   :root {
     --ion-background-color: #f8fafc;
@@ -59,5 +76,6 @@ ion-content {
     --dashboard-surface-muted: rgba(248, 250, 252, 0.85);
     --dashboard-border: rgba(15, 23, 42, 0.08);
     --dashboard-card-shadow: 0 15px 45px rgba(15, 23, 42, 0.08);
+    --dashboard-text-secondary: rgba(71, 85, 105, 0.95);
   }
 }

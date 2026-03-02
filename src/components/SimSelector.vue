@@ -1,5 +1,5 @@
 <template>
-  <section class="sim-selector-card">
+  <section class="sim-selector-card dashboard-panel-card">
     <div class="sim-selector-surface">
       <header class="sim-selector-header">
         <h3>Chọn SIM cho đợt gửi</h3>
@@ -217,19 +217,14 @@ onMounted(() => {
 <style scoped>
 .sim-selector-card {
   margin-bottom: 1rem;
-  --sim-card-bg: var(--dashboard-surface, var(--ion-card-background, #0f172a));
   --sim-card-text: var(--ion-text-color, #f8fafc);
   --sim-card-text-muted: var(--dashboard-text-secondary, var(--ion-color-step-600, #94a3b8));
-  --sim-card-border: var(--dashboard-border, var(--ion-color-step-200, rgba(148, 163, 184, 0.25)));
-  --sim-item-bg: var(--dashboard-surface-muted, rgba(15, 23, 42, 0.7));
+  --sim-card-border: var(--dashboard-border, rgba(148, 163, 184, 0.25));
+  --sim-item-bg: var(--dashboard-surface, rgba(15, 23, 42, 0.7));
   --sim-warning-bg: rgba(var(--ion-color-warning-rgb, 245, 158, 11), 0.2);
   --sim-warning-text: var(--ion-color-warning-shade, #b45309);
   --sim-muted-bg: rgba(148, 163, 184, 0.14);
-  background: var(--sim-card-bg);
   color: var(--sim-card-text);
-  border: 1px solid var(--sim-card-border);
-  border-radius: 1rem;
-  overflow: hidden;
 }
 
 .sim-selector-surface {
@@ -243,7 +238,7 @@ onMounted(() => {
 
 .sim-selector-header h3 {
   margin: 0;
-  font-size: 1rem;
+  font-size: 1.25rem;
 }
 
 .sim-selector-header p {
@@ -262,6 +257,20 @@ onMounted(() => {
   gap: 0.5rem;
   flex-wrap: wrap;
   margin-bottom: 0.75rem;
+}
+
+.mode-row ion-segment {
+  --background: var(--sim-item-bg);
+  border: 1px solid var(--sim-card-border);
+  border-radius: 0.75rem;
+}
+
+.mode-row ion-segment-button {
+  --color: var(--sim-card-text-muted);
+  --color-checked: var(--sim-card-text);
+  --background-checked: rgba(var(--ion-color-primary-rgb, 34, 197, 94), 0.2);
+  --indicator-color: transparent;
+  min-height: 40px;
 }
 
 .loading-row {

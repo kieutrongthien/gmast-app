@@ -2,7 +2,7 @@
   <ion-page>
     <ion-header :translucent="true">
       <ion-toolbar>
-        <ion-title>Pending Queue</ion-title>
+        <ion-title>Queue</ion-title>
         <ion-buttons slot="end">
           <ion-button fill="clear" :disabled="loading" @click="handleManualRefresh">
             <ion-icon :icon="refreshOutline" slot="icon-only" />
@@ -24,7 +24,7 @@
         <div class="hero-text">
           <p class="hero-eyebrow">GMast · Queue Ops</p>
           <div class="hero-heading">
-            <h1>Trung tâm điều phối</h1>
+            <h3>Trung tâm điều phối</h3>
             <ion-chip color="success" class="hero-chip">
               <ion-icon :icon="cloudOfflineOutline" />
               <ion-label>{{ totalItems }} tin chờ</ion-label>
@@ -58,52 +58,46 @@
         </div>
       </section>
 
-      <section class="dashboard-panels">
-        <div class="panel primary-panel">
-          <div class="panel-header">
-            <div>
-              <p class="panel-eyebrow">Hàng đợi ưu tiên</p>
-              <div class="panel-title-row">
-                <h2>Danh sách tin nhắn</h2>
-                <ion-select
-                  :value="activeSegment"
-                  class="queue-filter-select"
-                  interface="popover"
-                  label="Lọc trạng thái"
-                  label-placement="stacked"
-                  @ionChange="handleFilterChange"
-                >
-                  <ion-select-option v-for="tab in queueTabs" :key="tab.id" :value="tab.id">
-                    {{ tab.label }} ({{ tab.count }})
-                  </ion-select-option>
-                </ion-select>
-              </div>
-            </div>
-            <div class="panel-updated">
-              <ion-icon :icon="alertCircleOutline" />
-              <span>Cập nhật {{ lastUpdatedLabel }}</span>
+      <section class="panel primary-panel dashboard-panel-card">
+        <div class="panel-header">
+          <div>
+            <p class="panel-eyebrow">Hàng đợi ưu tiên</p>
+            <div class="panel-title-row">
+              <h3>Danh sách tin nhắn</h3>
+              <ion-select
+                :value="activeSegment"
+                class="queue-filter-select"
+                interface="popover"
+                label="Lọc trạng thái"
+                label-placement="stacked"
+                @ionChange="handleFilterChange"
+              >
+                <ion-select-option v-for="tab in queueTabs" :key="tab.id" :value="tab.id">
+                  {{ tab.label }} ({{ tab.count }})
+                </ion-select-option>
+              </ion-select>
             </div>
           </div>
-
-          <div class="queue-notes" v-if="hasResultFailures">
-            <ion-chip color="danger" button @click="handleRetryResultSync">
-              <ion-icon :icon="cloudOfflineOutline" />
-              <ion-label>Lỗi sync ({{ failedResultCount }})</ion-label>
-            </ion-chip>
+          <div class="panel-updated">
+            <ion-icon :icon="alertCircleOutline" />
+            <span>Cập nhật {{ lastUpdatedLabel }}</span>
           </div>
-
-          <queue-list
-            :items="filteredMessages"
-            class="queue-list-section"
-          />
         </div>
 
-        <div class="panel sidebar">
-          <sim-selector />
-          <div class="status-loading" v-if="loading">
-            <ion-spinner name="crescent" />
-            <span>Đang đồng bộ dữ liệu...</span>
-          </div>
+        <div class="queue-notes" v-if="hasResultFailures">
+          <ion-chip color="danger" button @click="handleRetryResultSync">
+            <ion-icon :icon="cloudOfflineOutline" />
+            <ion-label>Lỗi sync ({{ failedResultCount }})</ion-label>
+          </ion-chip>
+        </div>
+
+        <queue-list
+          :items="filteredMessages"
+          class="queue-list-section"
+        />
+        <div class="status-loading" v-if="loading">
+          <ion-spinner name="crescent" />
+          <span>Đang đồng bộ dữ liệu...</span>
         </div>
       </section>
 
@@ -143,7 +137,6 @@ import type { RefresherCustomEvent, SelectChangeEventDetail } from '@ionic/core'
 import { alertCircleOutline, cloudOfflineOutline, refreshOutline, warningOutline } from 'ionicons/icons';
 import { onMounted, computed, ref, onBeforeUnmount } from 'vue';
 import QueueList from '@/components/QueueList.vue';
-import SimSelector from '@/components/SimSelector.vue';
 import { usePendingQueue } from '@/composables/usePendingQueue';
 import { useResultSync } from '@/composables/useResultSync';
 import type { QueueMessage } from '@/types/queue';
@@ -394,7 +387,7 @@ ion-content {
   font-size: 0.9rem;
   text-transform: uppercase;
   letter-spacing: 0.15em;
-  color: rgba(248, 250, 252, 0.7);
+  color: var(--dashboard-text-secondary);
 }
 
 .hero-heading {
@@ -482,20 +475,8 @@ ion-content {
   color: var(--dashboard-danger);
 }
 
-.dashboard-panels {
-  display: grid;
-  grid-template-columns: minmax(0, 2.1fr) minmax(280px, 1fr);
-  gap: 1.5rem;
-}
-
 .panel {
   padding: 1.5rem;
-  border-radius: 1.25rem;
-  background: var(--dashboard-surface-muted);
-  border: 1px solid var(--dashboard-border);
-  box-shadow: var(--dashboard-card-shadow);
-  min-width: 0;
-  overflow-x: hidden;
 }
 
 .panel-header {
@@ -511,10 +492,10 @@ ion-content {
   font-size: 0.85rem;
   letter-spacing: 0.1em;
   text-transform: uppercase;
-  color: rgba(248, 250, 252, 0.55);
+  color: var(--dashboard-text-secondary);
 }
 
-.panel-header h2 {
+.panel-header h3 {
   margin: 0.15rem 0 0;
 }
 
@@ -549,24 +530,12 @@ ion-content {
   min-height: 320px;
 }
 
-.sidebar {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-}
-
 .status-loading {
   display: flex;
   align-items: center;
   gap: 0.5rem;
   font-size: 0.9rem;
   color: rgba(248, 250, 252, 0.75);
-}
-
-@media (max-width: 1024px) {
-  .dashboard-panels {
-    grid-template-columns: 1fr;
-  }
 }
 
 @media (max-width: 640px) {
