@@ -20,7 +20,7 @@
     <ion-alert
       :is-open="permissionAlertOpen"
       :header="t('startupPermission.title')"
-      :message="t('startupPermission.message')"
+      :message="permissionAlertMessage"
       :buttons="permissionAlertButtons"
       :backdrop-dismiss="false"
     />
@@ -45,10 +45,18 @@ import { listOutline, phonePortraitOutline, settingsOutline } from 'ionicons/ico
 import { computed, onMounted, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import VersionGateModal from '@/components/VersionGateModal.vue';
-import { ensureStartupPermissions } from '@/services/permissions/startupPermissionService';
+import {
+  ensureStartupPermissions,
+  getStartupPermissionDebugSnapshot
+} from '@/services/permissions/startupPermissionService';
 
 const { t } = useI18n();
 const permissionAlertOpen = ref(false);
+const startupPermissionDebugSummary = ref('SIM: not-checked · Notification: not-checked');
+
+const permissionAlertMessage = computed(() => {
+  return `${t('startupPermission.message')}<br/><br/>Debug: ${startupPermissionDebugSummary.value}`;
+});
 
 const permissionAlertButtons = computed(() => [
   {
@@ -64,6 +72,9 @@ const permissionAlertButtons = computed(() => [
 
 onMounted(async () => {
   const granted = await ensureStartupPermissions();
+  const debug = getStartupPermissionDebugSnapshot();
+  startupPermissionDebugSummary.value = debug.summary;
+
   if (!granted) {
     permissionAlertOpen.value = true;
   }

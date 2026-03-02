@@ -88,19 +88,55 @@ const getPermission = async (): Promise<PermissionStatus> => Sim.checkPermission
 
 const requestPermission = async (): Promise<PermissionStatus> => Sim.requestPermissions();
 
+type SimPermissionStatusLike = PermissionStatus & {
+  readSimCard?: PermissionState;
+  readPhoneState?: PermissionState;
+  readPhoneNumbers?: PermissionState;
+};
+
+const resolveSimReadPermission = (permissionStatus: PermissionStatus): PermissionState => {
+  const status = permissionStatus as SimPermissionStatusLike;
+
+  if (status.readSimCard) {
+    return status.readSimCard;
+  }
+
+  if (status.readPhoneState === 'granted' && (!status.readPhoneNumbers || status.readPhoneNumbers === 'granted')) {
+    return 'granted';
+  }
+
+  if (status.readPhoneState === 'denied' || status.readPhoneNumbers === 'denied') {
+    return 'denied';
+  }
+
+  if (
+    status.readPhoneState === 'prompt-with-rationale' ||
+    status.readPhoneNumbers === 'prompt-with-rationale'
+  ) {
+    return 'prompt-with-rationale';
+  }
+
+  if (status.readPhoneState === 'prompt' || status.readPhoneNumbers === 'prompt') {
+    return 'prompt';
+  }
+
+  return 'denied';
+};
+
 export const ensureSimReadPermission = async (): Promise<PermissionState> => {
   if (!isSupportedRuntime() || !isSimPluginAvailable()) {
     return 'denied';
   }
 
   const current = await getPermission();
+  const currentPermission = resolveSimReadPermission(current);
 
-  if (current.readSimCard === 'granted') {
-    return current.readSimCard;
+  if (currentPermission === 'granted') {
+    return currentPermission;
   }
 
   const updated = await requestPermission();
-  return updated.readSimCard;
+  return resolveSimReadPermission(updated);
 };
 
 export const readSimInventory = async (
@@ -118,13 +154,15 @@ export const readSimInventory = async (
   }
 
   let permissionStatus = await getPermission();
+  let readPermission = resolveSimReadPermission(permissionStatus);
 
-  if (permissionStatus.readSimCard !== 'granted' && requestAccess) {
+  if (readPermission !== 'granted' && requestAccess) {
     permissionStatus = await requestPermission();
+    readPermission = resolveSimReadPermission(permissionStatus);
   }
 
-  if (permissionStatus.readSimCard !== 'granted') {
-    return toSnapshot('permission-denied', permissionStatus.readSimCard, platform, [], 'readSimCard-denied');
+  if (readPermission !== 'granted') {
+    return toSnapshot('permission-denied', readPermission, platform, [], 'readSimCard-denied');
   }
 
   const [{ simCards }, pluginVersion] = await Promise.all([
@@ -135,5 +173,5 @@ export const readSimInventory = async (
   const slots = simCards.map(normalizeSimCard);
   const reason = platform === 'ios' ? 'ios-carrier-restrictions' : undefined;
 
-  return toSnapshot('ready', permissionStatus.readSimCard, platform, slots, reason, pluginVersion?.version);
+  return toSnapshot('ready', readPermission, platform, slots, reason, pluginVersion?.version);
 };

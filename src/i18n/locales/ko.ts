@@ -14,7 +14,7 @@ const ko = {
     title: '큐',
     refresherPulling: '당겨서 새로고침',
     refresherLoading: '불러오는 중...',
-    heroEyebrow: 'GMast · Queue Ops',
+    heroEyebrow: 'GMAST · Queue Ops',
     heroTitle: '운영 허브',
     heroPendingCount: '대기 메시지 {count}건',
     heroSubtitle:
