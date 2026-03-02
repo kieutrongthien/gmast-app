@@ -361,7 +361,7 @@ onBeforeUnmount(() => {
 <style scoped>
 ion-content {
   --padding-top: 2.5rem;
-  --padding-bottom: 2rem;
+  --padding-bottom: calc(2rem + var(--app-safe-area-bottom, 0px));
   --padding-start: clamp(1rem, 4vw, 3rem);
   --padding-end: clamp(1rem, 4vw, 3rem);
   background: radial-gradient(circle at top left, rgba(34, 197, 94, 0.25), transparent 45%),

@@ -38,7 +38,7 @@ const sanitizePageSize = (value: number): number => {
   return Math.min(coerced, appConfig.queue.maxPageSize);
 };
 
-const toPriority = (value?: string | number): QueueMessagePriority => {
+const toPriority = (value?: string | number | null): QueueMessagePriority => {
   if (typeof value === 'number' && Number.isFinite(value)) {
     if (value <= 50) {
       return 'low';
@@ -70,7 +70,7 @@ const toPriority = (value?: string | number): QueueMessagePriority => {
   }
 };
 
-const toStatus = (value?: string | number): QueueMessageStatus => {
+const toStatus = (value?: string | number | null): QueueMessageStatus => {
   if (typeof value === 'number' && Number.isFinite(value)) {
     switch (value) {
       case -1:

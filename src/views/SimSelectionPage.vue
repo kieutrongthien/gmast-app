@@ -23,6 +23,10 @@ const { t } = useI18n();
 </script>
 
 <style scoped>
+ion-content {
+  --padding-bottom: calc(1rem + var(--app-safe-area-bottom, 0px));
+}
+
 .sim-page-content {
   padding: 1rem;
 }

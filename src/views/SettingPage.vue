@@ -52,6 +52,10 @@ const handleLocaleChange = async (event: CustomEvent<SelectChangeEventDetail>) =
 </script>
 
 <style scoped>
+ion-content {
+  --padding-bottom: calc(1rem + var(--app-safe-area-bottom, 0px));
+}
+
 .setting-content {
   padding: 1rem;
   margin: 1rem;

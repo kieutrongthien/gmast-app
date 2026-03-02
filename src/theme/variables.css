@@ -37,6 +37,8 @@
   --dashboard-warning: #f97316;
   --dashboard-danger: #ef4444;
   --dashboard-grid-gap: 1rem;
+  --app-safe-area-top: var(--ion-safe-area-top, env(safe-area-inset-top, 0px));
+  --app-safe-area-bottom: var(--ion-safe-area-bottom, env(safe-area-inset-bottom, 0px));
 }
 
 .dashboard-panel-card {
@@ -59,6 +61,15 @@ ion-toolbar,
 ion-header,
 ion-content {
   --background: transparent;
+}
+
+ion-header ion-toolbar {
+  padding-top: var(--app-safe-area-top);
+}
+
+ion-tab-bar {
+  padding-bottom: var(--app-safe-area-bottom);
+  height: calc(56px + var(--app-safe-area-bottom));
 }
 
 ion-button,
