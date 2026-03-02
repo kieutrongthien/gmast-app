@@ -1,8 +1,16 @@
 import { describe, it, expect } from 'vitest';
 import { mount } from '@vue/test-utils';
+import { createI18n } from 'vue-i18n';
 import SimInventorySheet from '@/components/SimInventorySheet.vue';
+import en from '@/i18n/locales/en';
 
 type PartialProps = Partial<InstanceType<typeof SimInventorySheet>['$props']>;
+
+const i18n = createI18n({
+  legacy: false,
+  locale: 'en',
+  messages: { en }
+});
 
 const ionConfig = {
   config: {
@@ -14,7 +22,8 @@ const ionConfig = {
     IonModal: {
       template: '<div class="ion-modal-stub"><slot /></div>'
     }
-  }
+  },
+  plugins: [i18n]
 };
 
 const baseProps = {
@@ -79,7 +88,7 @@ describe('SimInventorySheet', () => {
   it('shows loading state when reading inventory', () => {
     const wrapper = mountSheet({ loading: true, slots: [], status: 'ready' });
 
-    expect(wrapper.text()).toContain('Đang đọc danh sách SIM');
+    expect(wrapper.text()).toContain('Reading SIM list');
   });
 
   it('emits refresh and close events from actions', async () => {
@@ -100,6 +109,6 @@ describe('SimInventorySheet', () => {
       loading: false
     });
 
-    expect(wrapper.text()).toContain('Chưa có quyền đọc SIM');
+    expect(wrapper.text()).toContain('SIM read permission is missing');
   });
 });

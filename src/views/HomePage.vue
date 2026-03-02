@@ -2,7 +2,7 @@
   <ion-page>
     <ion-header :translucent="true">
       <ion-toolbar>
-        <ion-title>Queue</ion-title>
+        <ion-title>{{ t('home.title') }}</ion-title>
         <ion-buttons slot="end">
           <ion-button fill="clear" :disabled="loading" @click="handleManualRefresh">
             <ion-icon :icon="refreshOutline" slot="icon-only" />
@@ -14,35 +14,35 @@
     <ion-content :fullscreen="true">
       <ion-refresher slot="fixed" @ionRefresh="handleRefresh">
         <ion-refresher-content
-          pulling-text="Kéo để làm mới"
+          :pulling-text="t('home.refresherPulling')"
           refreshing-spinner="crescent"
-          refreshing-text="Đang tải..."
+          :refreshing-text="t('home.refresherLoading')"
         />
       </ion-refresher>
 
       <section class="dashboard-hero">
         <div class="hero-text">
-          <p class="hero-eyebrow">GMast · Queue Ops</p>
+          <p class="hero-eyebrow">{{ t('home.heroEyebrow') }}</p>
           <div class="hero-heading">
-            <h3>Trung tâm điều phối</h3>
+            <h3>{{ t('home.heroTitle') }}</h3>
             <ion-chip color="success" class="hero-chip">
               <ion-icon :icon="cloudOfflineOutline" />
-              <ion-label>{{ totalItems }} tin chờ</ion-label>
+              <ion-label>{{ t('home.heroPendingCount', { count: totalItems }) }}</ion-label>
             </ion-chip>
           </div>
           <p class="hero-subtitle">
-            Theo dõi KPI, ưu tiên SIM và phản ứng nhanh với lỗi đồng bộ trước khi ảnh hưởng tới khách hàng.
+            {{ t('home.heroSubtitle') }}
           </p>
         </div>
         <div class="hero-actions">
           <ion-button color="primary" :disabled="loading" @click="handleManualRefresh">
             <ion-icon :icon="refreshOutline" slot="start" />
-            Quét hàng đợi
+            {{ t('home.scanQueue') }}
           </ion-button>
-          <ion-chip color="medium" v-if="usingMock">Mock data</ion-chip>
+          <ion-chip color="medium" v-if="usingMock">{{ t('home.mockData') }}</ion-chip>
           <ion-chip color="danger" v-if="error">
             <ion-icon :icon="warningOutline" />
-            <ion-label>Lỗi API</ion-label>
+            <ion-label>{{ t('home.apiError') }}</ion-label>
           </ion-chip>
         </div>
       </section>
@@ -61,33 +61,33 @@
       <section class="panel primary-panel dashboard-panel-card">
         <div class="panel-header">
           <div>
-            <p class="panel-eyebrow">Hàng đợi ưu tiên</p>
+            <p class="panel-eyebrow">{{ t('home.panelEyebrow') }}</p>
             <div class="panel-title-row">
-              <h3>Danh sách tin nhắn</h3>
+              <h3>{{ t('home.panelTitle') }}</h3>
               <ion-select
                 :value="activeSegment"
                 class="queue-filter-select"
                 interface="popover"
-                label="Lọc trạng thái"
+                :label="t('home.filterLabel')"
                 label-placement="stacked"
                 @ionChange="handleFilterChange"
               >
                 <ion-select-option v-for="tab in queueTabs" :key="tab.id" :value="tab.id">
-                  {{ tab.label }} ({{ tab.count }})
+                  {{ t(tab.labelKey) }} ({{ tab.count }})
                 </ion-select-option>
               </ion-select>
             </div>
           </div>
           <div class="panel-updated">
             <ion-icon :icon="alertCircleOutline" />
-            <span>Cập nhật {{ lastUpdatedLabel }}</span>
+            <span>{{ t('home.updated', { value: lastUpdatedLabel }) }}</span>
           </div>
         </div>
 
         <div class="queue-notes" v-if="hasResultFailures">
           <ion-chip color="danger" button @click="handleRetryResultSync">
             <ion-icon :icon="cloudOfflineOutline" />
-            <ion-label>Lỗi sync ({{ failedResultCount }})</ion-label>
+            <ion-label>{{ t('home.syncErrorChip', { count: failedResultCount }) }}</ion-label>
           </ion-chip>
         </div>
 
@@ -97,7 +97,7 @@
         />
         <div class="status-loading" v-if="loading">
           <ion-spinner name="crescent" />
-          <span>Đang đồng bộ dữ liệu...</span>
+          <span>{{ t('home.syncing') }}</span>
         </div>
       </section>
 
@@ -136,10 +136,13 @@ import {
 import type { RefresherCustomEvent, SelectChangeEventDetail } from '@ionic/core';
 import { alertCircleOutline, cloudOfflineOutline, refreshOutline, warningOutline } from 'ionicons/icons';
 import { onMounted, computed, ref, onBeforeUnmount } from 'vue';
+import { useI18n } from 'vue-i18n';
 import QueueList from '@/components/QueueList.vue';
 import { usePendingQueue } from '@/composables/usePendingQueue';
 import { useResultSync } from '@/composables/useResultSync';
 import type { QueueMessage } from '@/types/queue';
+
+const { t } = useI18n();
 
 const {
   messages,
@@ -170,9 +173,9 @@ const hasResultFailures = hasFailures;
 const resultToastOpen = toastOpen;
 const resultToastMessage = computed(() => {
   if (failureCount.value <= 1) {
-    return lastErrorMessage.value;
+    return t('home.resultSync.oneFailed', { message: lastErrorMessage.value });
   }
-  return `${failureCount.value} kết quả chưa đồng bộ. Thử lại nhé?`;
+  return t('home.resultSync.multipleFailed', { count: failureCount.value });
 });
 
 const activeSegment = ref('all');
@@ -218,58 +221,58 @@ const averageRetryCount = computed(() => {
 const kpiCards = computed(() => [
   {
     id: 'pending',
-    label: 'Tin chờ',
+    label: t('home.kpi.pending.label'),
     value: pendingTotal.value,
-    trendLabel: `${statusCounts.value.pending} pending`,
+    trendLabel: t('home.kpi.pending.trend', { count: statusCounts.value.pending }),
     trendClass: 'is-neutral',
-    support: 'Theo dõi SLA 15 phút'
+    support: t('home.kpi.pending.support')
   },
   {
     id: 'processing',
-    label: 'Đang xử lý',
+    label: t('home.kpi.processing.label'),
     value: processingTotal.value,
-    trendLabel: `${highPriorityCount.value} ưu tiên cao`,
+    trendLabel: t('home.kpi.processing.trend', { count: highPriorityCount.value }),
     trendClass: highPriorityCount.value > 0 ? 'is-warning' : 'is-neutral',
-    support: 'Kiểm tra trước vòng gửi'
+    support: t('home.kpi.processing.support')
   },
   {
     id: 'failed',
-    label: 'Lỗi cần xử lý',
+    label: t('home.kpi.failed.label'),
     value: failedTotal.value,
-    trendLabel: `${failureCount.value} chờ retry`,
+    trendLabel: t('home.kpi.failed.trend', { count: failureCount.value }),
     trendClass: failedTotal.value > 0 ? 'is-danger' : 'is-positive',
-    support: 'Nhấn retry để đồng bộ'
+    support: t('home.kpi.failed.support')
   },
   {
     id: 'sla',
-    label: 'Nguy cơ SLA',
+    label: t('home.kpi.sla.label'),
     value: slaRiskCount.value,
-    trendLabel: `Retry trung bình ${averageRetryCount.value} lần`,
+    trendLabel: t('home.kpi.sla.trend', { count: averageRetryCount.value }),
     trendClass: slaRiskCount.value > 0 ? 'is-warning' : 'is-positive',
-    support: 'Tin quá 30 phút'
+    support: t('home.kpi.sla.support')
   }
 ]);
 
 type SegmentFilter = (message: QueueMessage) => boolean;
 interface SegmentDefinition {
   id: string;
-  label: string;
+  labelKey: string;
   filter: SegmentFilter;
 }
 
 const segmentDefinitions: SegmentDefinition[] = [
-  { id: 'all', label: 'Tất cả', filter: () => true },
+  { id: 'all', labelKey: 'home.statuses.all', filter: () => true },
   {
     id: 'pending',
-    label: 'Chờ gửi',
+    labelKey: 'home.statuses.pending',
     filter: (message) => message.status === 'pending'
   },
   {
     id: 'processing',
-    label: 'Đang xử lý',
+    labelKey: 'home.statuses.processing',
     filter: (message) => message.status === 'processing'
   },
-  { id: 'failed', label: 'Lỗi', filter: (message) => message.status === 'failed' }
+  { id: 'failed', labelKey: 'home.statuses.failed', filter: (message) => message.status === 'failed' }
 ];
 
 const queueTabs = computed(() =>
@@ -287,7 +290,7 @@ const filteredMessages = computed(() => {
 
 const lastUpdatedLabel = computed(() => {
   if (!lastUpdated.value) {
-    return 'Chưa có dữ liệu';
+    return t('home.noData');
   }
   const updatedDate = new Date(lastUpdated.value);
   if (Number.isNaN(updatedDate.getTime())) {
@@ -296,13 +299,13 @@ const lastUpdatedLabel = computed(() => {
   const diffMs = Date.now() - updatedDate.getTime();
   const diffMinutes = Math.round(diffMs / 60000);
   if (diffMinutes < 1) {
-    return 'Vừa xong';
+    return t('home.justNow');
   }
   if (diffMinutes < 60) {
-    return `${diffMinutes} phút trước`;
+    return t('home.minutesAgo', { count: diffMinutes });
   }
   const diffHours = Math.round(diffMinutes / 60);
-  return `${diffHours} giờ trước`;
+  return t('home.hoursAgo', { count: diffHours });
 });
 
 const handleFilterChange = (event: CustomEvent<SelectChangeEventDetail>) => {
@@ -329,14 +332,14 @@ const handleToastDismiss = () => {
 
 const resultToastButtons = [
   {
-    text: 'Thử lại',
+    text: t('common.retry'),
     handler: () => {
       handleRetryResultSync();
       return false;
     }
   },
   {
-    text: 'Đóng',
+    text: t('common.close'),
     role: 'cancel',
     handler: () => {
       dismissToast();
@@ -535,7 +538,7 @@ ion-content {
   align-items: center;
   gap: 0.5rem;
   font-size: 0.9rem;
-  color: rgba(248, 250, 252, 0.75);
+  color: var(--dashboard-text-secondary);
 }
 
 @media (max-width: 640px) {

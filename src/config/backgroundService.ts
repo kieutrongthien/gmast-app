@@ -25,10 +25,10 @@ export const backgroundServiceConfig: BackgroundServiceConfig = {
   android: {
     notificationId: 7021,
     channelId: 'gmast-send-channel',
-    channelName: 'Gửi tin nhắn nền',
-    channelDescription: 'Giữ tiến trình gửi GMAST hoạt động khi ứng dụng thu nhỏ',
-    title: 'GMAST đang gửi tin nhắn',
-    body: 'Tin nhắn sẽ tiếp tục gửi ngay cả khi bạn khóa màn hình.',
+    channelName: 'Background Message Sending',
+    channelDescription: 'Keep GMAST sending active when the app is in the background',
+    title: 'GMAST is sending messages',
+    body: 'Message sending continues even while your screen is locked.',
     smallIcon: 'ic_stat_gmast_background',
     silent: true,
     importance: Importance.Default

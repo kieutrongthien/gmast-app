@@ -10,6 +10,7 @@ import {
   createForegroundServiceController,
   type ForegroundServiceController
 } from '@/services/background/foregroundServiceController';
+import { tr } from '@/i18n/translate';
 
 interface AppBridge {
   addListener(
@@ -32,6 +33,15 @@ export class BackgroundServiceManager {
     return this.running;
   }
 
+  private foregroundNotificationOverrides() {
+    return {
+      channelName: tr('notifications.foreground.channelName'),
+      channelDescription: tr('notifications.foreground.channelDescription'),
+      title: tr('notifications.foreground.title'),
+      body: tr('notifications.foreground.body')
+    };
+  }
+
   async start(runner?: BackgroundTaskRunner): Promise<void> {
     if (this.running) {
       return;
@@ -40,7 +50,7 @@ export class BackgroundServiceManager {
     this.running = true;
 
     if (this.foregroundController.isSupported()) {
-      await this.foregroundController.start();
+      await this.foregroundController.start(this.foregroundNotificationOverrides());
     }
 
     if (this.taskController.isSupported()) {
@@ -57,7 +67,7 @@ export class BackgroundServiceManager {
       } else {
         await this.taskController.register(runner);
         if (this.foregroundController.isSupported() && !this.foregroundController.isRunning()) {
-          await this.foregroundController.start();
+          await this.foregroundController.start(this.foregroundNotificationOverrides());
         }
       }
     });

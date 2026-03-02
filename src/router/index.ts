@@ -40,7 +40,7 @@ router.beforeEach(async (_to, _from, next) => {
   try {
     await ensureVersionGateSnapshot();
   } catch (error) {
-    console.warn('[version-guard] Không thể kiểm tra phiên bản', error);
+    console.warn('[version-guard] Unable to verify app version', error);
   }
   next();
 });

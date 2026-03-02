@@ -2,7 +2,7 @@
   <ion-modal :is-open="isOpen" class="sim-inventory-modal" @didDismiss="handleDismiss">
     <ion-header translucent>
       <ion-toolbar>
-        <ion-title>SIM khả dụng</ion-title>
+        <ion-title>{{ t('sim.sheet.title') }}</ion-title>
         <ion-buttons slot="end">
           <ion-button fill="clear" size="small" @click="handleDismiss" data-test="close-button">
             <ion-icon :icon="closeOutline" slot="icon-only" />
@@ -14,10 +14,10 @@
     <ion-content class="sheet-content">
       <div class="sheet-meta">
         <div class="meta-group">
-          <p><strong>Trạng thái:</strong> {{ statusLabel }}</p>
-          <p><strong>Quyền:</strong> {{ permissionLabel }}</p>
-          <p><strong>Nền tảng:</strong> {{ platformLabel }}</p>
-          <p v-if="pluginVersion"><strong>Plugin:</strong> v{{ pluginVersion }}</p>
+          <p><strong>{{ t('sim.sheet.status') }}:</strong> {{ statusLabel }}</p>
+          <p><strong>{{ t('sim.sheet.permission') }}:</strong> {{ permissionLabel }}</p>
+          <p><strong>{{ t('sim.sheet.platform') }}:</strong> {{ platformLabel }}</p>
+          <p v-if="pluginVersion"><strong>{{ t('sim.sheet.plugin') }}:</strong> v{{ pluginVersion }}</p>
           <p v-if="reason" class="meta-note">{{ reasonLabel }}</p>
         </div>
         <ion-button
@@ -27,13 +27,13 @@
           data-test="refresh-button"
         >
           <ion-icon slot="start" :icon="refreshOutline" />
-          Quét lại
+          {{ t('sim.sheet.scanAgain') }}
         </ion-button>
       </div>
 
       <div v-if="loading" class="sheet-state">
         <ion-spinner name="crescent" />
-        <p>Đang đọc danh sách SIM...</p>
+        <p>{{ t('sim.sheet.loading') }}</p>
       </div>
       <div v-else-if="errorMessage" class="sheet-state state-warning">
         <ion-icon :icon="alertCircleOutline" />
@@ -41,11 +41,11 @@
       </div>
       <div v-else-if="status === 'permission-denied'" class="sheet-state state-warning">
         <ion-icon :icon="alertCircleOutline" />
-        <p>Chưa có quyền đọc SIM. Nhấn "Quét lại" để yêu cầu lại.</p>
+        <p>{{ t('sim.sheet.permissionHint') }}</p>
       </div>
       <div v-else-if="status === 'unsupported'" class="sheet-state state-muted">
         <ion-icon :icon="alertCircleOutline" />
-        <p>Thiết bị hiện chưa hỗ trợ đọc SIM/eSIM.</p>
+        <p>{{ t('sim.sheet.unsupported') }}</p>
       </div>
       <ion-list v-else-if="slots.length" lines="full" class="slot-inventory">
         <ion-item
@@ -58,12 +58,17 @@
           <ion-label>
             <h3>{{ slot.label }}</h3>
             <p>
-              {{ slot.carrierName || 'Không rõ nhà mạng' }} ·
+              {{ slot.carrierName || t('sim.sheet.unknownCarrier') }} ·
               {{ formatPhone(slot.phoneNumber) }}
             </p>
             <p class="slot-meta">
-              Slot #{{ slot.slotIndex ?? '—' }} · MCC {{ slot.mobileCountryCode || '--' }} / MNC
-              {{ slot.mobileNetworkCode || '--' }}
+              {{
+                t('sim.sheet.slotMeta', {
+                  slot: slot.slotIndex ?? '—',
+                  mcc: slot.mobileCountryCode || '--',
+                  mnc: slot.mobileNetworkCode || '--'
+                })
+              }}
             </p>
           </ion-label>
           <ion-badge :color="badgeColor(slot.state)">{{ slotStateLabel(slot.state) }}</ion-badge>
@@ -71,11 +76,11 @@
       </ion-list>
       <div v-else class="sheet-state state-muted">
         <ion-icon :icon="alertCircleOutline" />
-        <p>Không tìm thấy SIM khả dụng.</p>
+        <p>{{ t('sim.sheet.noSim') }}</p>
       </div>
 
       <ion-note v-if="lastFetchedAt" class="fetched-note">
-        Cập nhật lúc {{ fetchedLabel }}
+        {{ t('sim.sheet.fetchedAt', { time: fetchedLabel }) }}
       </ion-note>
     </ion-content>
   </ion-modal>
@@ -101,7 +106,10 @@ import {
 import type { PermissionState } from '@capacitor/core';
 import { alertCircleOutline, cellularOutline, closeOutline, refreshOutline } from 'ionicons/icons';
 import { computed } from 'vue';
+import { useI18n } from 'vue-i18n';
 import type { SimInventoryStatus, SimPlatform, SimSlotMetadata, SimSlotState } from '@/types/sim';
+
+const { t, locale } = useI18n();
 
 interface Props {
   isOpen: boolean;
@@ -125,65 +133,65 @@ const emit = defineEmits<{
 const statusLabel = computed(() => {
   switch (props.status) {
     case 'ready':
-      return 'Đang hoạt động';
+      return t('sim.sheet.statusLabel.ready');
     case 'permission-denied':
-      return 'Thiếu quyền';
+      return t('sim.sheet.statusLabel.denied');
     default:
-      return 'Không hỗ trợ';
+      return t('sim.sheet.statusLabel.unsupported');
   }
 });
 
 const permissionLabel = computed(() => {
   switch (props.permission) {
     case 'granted':
-      return 'Đã cấp';
+      return t('sim.sheet.permissionLabel.granted');
     case 'denied':
-      return 'Đã từ chối';
+      return t('sim.sheet.permissionLabel.denied');
     case 'prompt-with-rationale':
-      return 'Cần giải thích';
+      return t('sim.sheet.permissionLabel.rationale');
     case 'prompt':
     default:
-      return 'Chưa hỏi';
+      return t('sim.sheet.permissionLabel.prompt');
   }
 });
 
 const platformLabel = computed(() => {
   switch (props.platform) {
     case 'android':
-      return 'Android';
+      return t('sim.sheet.platformLabel.android');
     case 'ios':
-      return 'iOS';
+      return t('sim.sheet.platformLabel.ios');
     case 'web':
-      return 'Web preview';
+      return t('sim.sheet.platformLabel.web');
     default:
-      return 'Không xác định';
+      return t('sim.sheet.platformLabel.unknown');
   }
 });
 
 const reasonLabel = computed(() => props.reason === 'ios-carrier-restrictions'
-  ? 'iOS hạn chế trả về thông tin chi tiết nhà mạng.'
+  ? t('sim.sheet.reasonIosRestrictions')
   : props.reason ?? ''
 );
 
 const fetchedLabel = computed(() => {
   if (!props.lastFetchedAt) {
-    return 'chưa rõ';
+    return t('sim.selector.fallbackFetchedAt');
   }
   const date = new Date(props.lastFetchedAt);
   if (Number.isNaN(date.getTime())) {
     return props.lastFetchedAt;
   }
-  return date.toLocaleTimeString();
+  return date.toLocaleTimeString(locale.value === 'ko' ? 'ko-KR' : 'en-US');
 });
 
 const slotStateLabel = (state: SimSlotState): string => {
   switch (state) {
     case 'ready':
-      return 'Sẵn sàng';
+      return t('sim.sheet.slotState.ready');
     case 'empty':
-      return 'Trống';
+      return t('sim.sheet.slotState.empty');
     default:
-      return 'Không rõ';
+      return t('sim.sheet.slotState.unknown');
   }
 };
 
@@ -199,7 +207,7 @@ const badgeColor = (state: SimSlotState): 'success' | 'medium' | 'warning' => {
 
 const formatPhone = (value?: string): string => {
   if (!value) {
-    return 'Chưa có số';
+    return t('sim.sheet.noPhone');
   }
   return value;
 };

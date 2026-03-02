@@ -2,27 +2,27 @@
   <ion-modal :is-open="isBlocked" :backdrop-dismiss="false" class="version-gate-modal">
     <ion-header translucent>
       <ion-toolbar color="danger">
-        <ion-title>Yêu cầu cập nhật ứng dụng</ion-title>
+        <ion-title>{{ t('versionGate.title') }}</ion-title>
       </ion-toolbar>
     </ion-header>
 
     <ion-content class="ion-padding">
       <div class="modal-body">
         <p class="modal-lede">
-          Phiên bản hiện tại đã hết hạn nên không thể tiếp tục gửi tin. Cập nhật để mở khóa ứng dụng.
+          {{ t('versionGate.description') }}
         </p>
 
         <div v-if="snapshot" class="snapshot-details">
           <p>
-            <strong>Build hiện tại:</strong>
-            <span>{{ snapshot.currentBuild ?? snapshot.currentVersion ?? 'không rõ' }}</span>
+            <strong>{{ t('versionGate.currentBuild') }}:</strong>
+            <span>{{ snapshot.currentBuild ?? snapshot.currentVersion ?? t('versionGate.unknown') }}</span>
           </p>
           <p>
-            <strong>Yêu cầu tối thiểu:</strong>
-            <span>{{ snapshot.requiredBuild ?? snapshot.requiredVersion ?? 'không rõ' }}</span>
+            <strong>{{ t('versionGate.minimumRequired') }}:</strong>
+            <span>{{ snapshot.requiredBuild ?? snapshot.requiredVersion ?? t('versionGate.unknown') }}</span>
           </p>
           <p v-if="snapshot.message">
-            <strong>Thông báo:</strong>
+            <strong>{{ t('versionGate.message') }}:</strong>
             <span>{{ snapshot.message }}</span>
           </p>
         </div>
@@ -38,7 +38,7 @@
             v-if="snapshot?.downloadUrl"
             @click="handleDownload"
           >
-            Tải bản mới
+            {{ t('versionGate.download') }}
           </ion-button>
 
           <ion-button
@@ -49,7 +49,7 @@
             @click="handleRetry"
           >
             <ion-spinner name="crescent" slot="start" v-if="loading" />
-            Thử lại kiểm tra
+            {{ t('versionGate.retry') }}
           </ion-button>
         </div>
       </div>
@@ -69,9 +69,11 @@ import {
   IonToolbar
 } from '@ionic/vue';
 import { Capacitor } from '@capacitor/core';
+import { useI18n } from 'vue-i18n';
 import { useVersionGate } from '@/composables/useVersionGate';
 
 const { snapshot, isBlocked, loading, errorMessage, retry } = useVersionGate();
+const { t } = useI18n();
 
 const handleRetry = async (): Promise<void> => {
   await retry();

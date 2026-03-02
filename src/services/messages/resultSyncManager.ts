@@ -9,6 +9,7 @@ import {
   clearFailedResults,
   type FailedResultEntry
 } from '@/services/messages/resultStorage';
+import { tr } from '@/i18n/translate';
 
 const failedResults = ref<FailedResultEntry[]>([]);
 const toastVisible = ref(false);
@@ -47,7 +48,7 @@ export const recordResultSyncFailure = async (
   payload: DeliveryResultPayload,
   error?: unknown
 ): Promise<void> => {
-  const failureReason = reasonFromError(error) ?? 'Không thể đồng bộ trạng thái.';
+  const failureReason = reasonFromError(error) ?? tr('errors.resultStatusSyncFailed');
   failedResults.value = await upsertFailedResult(payload, failureReason);
   toastVisible.value = true;
   lastErrorMessage.value = failureReason;

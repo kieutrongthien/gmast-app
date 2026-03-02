@@ -50,7 +50,7 @@ vi.mock('@/utils/retry', () => ({
 import { httpClient } from '@/lib/httpClient';
 import { Preferences } from '@capacitor/preferences';
 import { appConfig } from '@/config/appConfig';
-import { checkAppVersion, clearCachedVersionCheck, getCachedVersionCheck } from '@/services/version';
+import { checkAppVersion, clearCachedVersionCheck } from '@/services/version';
 
 const httpClientMock = vi.mocked(httpClient, true);
 const preferencesMock = vi.mocked(Preferences, true);

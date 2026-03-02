@@ -33,7 +33,7 @@ const buildMessage = (index: number): QueueMessage => {
     groupUsername: `group-${(index % 4) + 1}`,
     studentId: `S${(1000 + index).toString()}`,
     receiver: buildPhone(),
-    title: `Thông báo ${index}`,
+    title: `Notice ${index}`,
     message: randomItem(sampleBodies),
     dedupeKey: index % 3 === 0 ? `batch-${Math.ceil(index / 3)}` : null,
     priority,

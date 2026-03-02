@@ -24,7 +24,7 @@
                 </p>
                 <div class="queue-label__meta">
                   <ion-note>
-                    {{ message.title || 'Không tiêu đề' }} · {{ message.priority.toUpperCase() }}
+                    {{ message.title || t('queue.fallbackTitle') }} · {{ message.priority.toUpperCase() }}
                   </ion-note>
                   <span class="queue-label__time">{{ formatTimestamp(message.updatedAt) }}</span>
                 </div>
@@ -38,8 +38,8 @@
     <ion-list v-else class="queue-list__empty">
       <ion-item lines="none">
         <ion-label>
-          <h3>Không có tin nhắn chờ</h3>
-          <p>Danh sách pending đang trống.</p>
+          <h3>{{ t('queue.emptyTitle') }}</h3>
+          <p>{{ t('queue.emptySubtitle') }}</p>
         </ion-label>
       </ion-item>
     </ion-list>
@@ -49,7 +49,10 @@
 <script setup lang="ts">
 import { computed, onMounted, onBeforeUnmount, ref, watch, toRefs } from 'vue';
 import { IonBadge, IonItem, IonLabel, IonList, IonNote } from '@ionic/vue';
+import { useI18n } from 'vue-i18n';
 import type { QueueMessage, QueueMessageStatus } from '@/types/queue';
+
+const { t, locale } = useI18n();
 
 const props = defineProps({
   items: {
@@ -115,15 +118,15 @@ const statusColor = (status: QueueMessageStatus): string => {
 const formatStatus = (status: QueueMessageStatus): string => {
   switch (status) {
     case 'pending':
-      return 'Pending';
+      return t('queue.status.pending');
     case 'processing':
-      return 'Processing';
+      return t('queue.status.processing');
     case 'failed':
-      return 'Failed';
+      return t('queue.status.failed');
     case 'sent':
-      return 'Sent';
+      return t('queue.status.sent');
     default:
-      return 'Unknown';
+      return t('queue.status.unknown');
   }
 };
 
@@ -132,7 +135,7 @@ const formatTimestamp = (value: string): string => {
   if (Number.isNaN(date.getTime())) {
     return value;
   }
-  return new Intl.DateTimeFormat('vi-VN', {
+  return new Intl.DateTimeFormat(locale.value === 'ko' ? 'ko-KR' : 'en-US', {
     hour: '2-digit',
     minute: '2-digit',
     day: '2-digit',

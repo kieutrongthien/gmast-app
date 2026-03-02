@@ -2,7 +2,7 @@
   <section class="sim-selector-card dashboard-panel-card">
     <div class="sim-selector-surface">
       <header class="sim-selector-header">
-        <h3>Chọn SIM cho đợt gửi</h3>
+        <h3>{{ t('sim.selector.title') }}</h3>
         <p>{{ selectionSummary }}</p>
       </header>
       <div class="sim-selector-content">
@@ -13,10 +13,10 @@
             @ionChange="handleModeChange"
           >
             <ion-segment-button value="manual">
-              <ion-label>Tự chọn</ion-label>
+              <ion-label>{{ t('sim.selector.modeManual') }}</ion-label>
             </ion-segment-button>
             <ion-segment-button value="random">
-              <ion-label>Ngẫu nhiên</ion-label>
+              <ion-label>{{ t('sim.selector.modeRandom') }}</ion-label>
             </ion-segment-button>
           </ion-segment>
           <ion-button
@@ -26,7 +26,7 @@
             @click="handleRefresh"
           >
             <ion-icon slot="start" :icon="refreshOutline" />
-            Quét lại
+            {{ t('sim.selector.scanAgain') }}
           </ion-button>
           <ion-button
             fill="clear"
@@ -35,13 +35,13 @@
             @click="handleOpenSheet"
           >
             <ion-icon slot="start" :icon="cellularOutline" />
-            Chi tiết
+            {{ t('sim.selector.details') }}
           </ion-button>
         </div>
 
         <div v-if="loading" class="loading-row">
           <ion-spinner name="crescent" />
-          <span>Đang đọc SIM khả dụng...</span>
+          <span>{{ t('sim.selector.loading') }}</span>
         </div>
 
         <template v-else>
@@ -52,16 +52,16 @@
           <div v-else-if="status === 'permission-denied'" class="notice notice-warning">
             <ion-icon :icon="alertCircleOutline" />
             <p>
-              Cần cấp quyền đọc thông tin SIM để chọn thủ công. Nhấn "Quét lại" để thử lại.
+              {{ t('sim.selector.permissionHint') }}
             </p>
           </div>
           <div v-else-if="status === 'unsupported'" class="notice notice-muted">
             <ion-icon :icon="alertCircleOutline" />
-            <p>Thiết bị hiện không hỗ trợ đọc thông tin SIM.</p>
+            <p>{{ t('sim.selector.unsupported') }}</p>
           </div>
           <div v-else-if="!slots.length" class="notice notice-muted">
             <ion-icon :icon="alertCircleOutline" />
-            <p>Không tìm thấy SIM nào. Kiểm tra kết nối vật lý hoặc eSIM.</p>
+            <p>{{ t('sim.selector.noSim') }}</p>
           </div>
           <div v-else class="slot-list">
             <ion-radio-group
@@ -77,7 +77,7 @@
                     <span v-if="slot.state !== 'ready'" class="slot-state">({{ slotStateLabel(slot.state) }})</span>
                   </p>
                   <p class="slot-meta">
-                    {{ slot.carrierName || 'Không rõ nhà mạng' }} · MCC {{ slot.mobileCountryCode || '--' }} / MNC
+                    {{ slot.carrierName || t('sim.selector.unknownCarrier') }} · MCC {{ slot.mobileCountryCode || '--' }} / MNC
                     {{ slot.mobileNetworkCode || '--' }}
                   </p>
                 </ion-label>
@@ -87,7 +87,7 @@
         </template>
 
         <ion-note color="medium" v-if="lastFetchedAt" class="fetched-at">
-          Cập nhật lúc {{ fetchedLabel }}
+          {{ t('sim.selector.fetchedAt', { time: fetchedLabel }) }}
         </ion-note>
       </div>
     </div>
@@ -124,10 +124,13 @@ import {
 import type { RadioGroupChangeEventDetail, SegmentChangeEventDetail } from '@ionic/core';
 import { alertCircleOutline, cellularOutline, refreshOutline } from 'ionicons/icons';
 import { computed, onMounted, ref } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { useSimSelection } from '@/composables/useSimSelection';
 import type { SimSelectionMode } from '@/types/send';
 import type { SimSlotState } from '@/types/sim';
 import SimInventorySheet from '@/components/SimInventorySheet.vue';
+
+const { t, locale } = useI18n();
 
 const {
   mode,
@@ -183,30 +186,30 @@ const handleSheetRefresh = async (): Promise<void> => {
 const slotStateLabel = (state: SimSlotState): string => {
   switch (state) {
     case 'ready':
-      return 'sẵn sàng';
+      return t('sim.selector.state.ready');
     case 'empty':
-      return 'trống';
+      return t('sim.selector.state.empty');
     default:
-      return 'không rõ';
+      return t('sim.selector.state.unknown');
   }
 };
 
 const selectionSummary = computed(() => {
   if (mode.value === 'random' || !selectedSlot.value) {
-    return 'Ứng dụng tự xoay vòng SIM khả dụng';
+    return t('sim.selector.summaryRandom');
   }
-  return `Ưu tiên ${selectedSlot.value.label}`;
+  return t('sim.selector.summaryManual', { label: selectedSlot.value.label });
 });
 
 const fetchedLabel = computed(() => {
   if (!lastFetchedAt.value) {
-    return 'chưa xác định';
+    return t('sim.selector.fallbackFetchedAt');
   }
   const date = new Date(lastFetchedAt.value);
   if (Number.isNaN(date.getTime())) {
     return lastFetchedAt.value;
   }
-  return date.toLocaleTimeString();
+  return date.toLocaleTimeString(locale.value === 'ko' ? 'ko-KR' : 'en-US');
 });
 
 onMounted(() => {

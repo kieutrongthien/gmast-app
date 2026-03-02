@@ -5,8 +5,10 @@ import {
   retryResultSync,
   dismissResultToast
 } from '@/services/messages/resultSyncManager';
+import { useI18n } from 'vue-i18n';
 
 export const useResultSync = () => {
+  const { t } = useI18n();
   const failureCount = computed(() => resultSyncState.failureCount.value);
 
   const toastOpen = computed(() => resultSyncState.toastVisible.value);
@@ -14,7 +16,7 @@ export const useResultSync = () => {
   const hasFailures = computed(() => failureCount.value > 0);
 
   const lastErrorMessage = computed(
-    () => resultSyncState.lastErrorMessage.value ?? 'Không thể đồng bộ kết quả gửi.'
+    () => resultSyncState.lastErrorMessage.value ?? t('errors.resultSyncFailed')
   );
 
   const retryFailedResults = async (): Promise<void> => {

@@ -4,6 +4,7 @@ import router from './router';
 
 import { IonicVue } from '@ionic/vue';
 import { initializeNotificationActionRouter } from '@/services/notifications/notificationActionRouter';
+import { i18n, setupI18nLocale } from '@/i18n';
 
 /* Core CSS required for Ionic components to work properly */
 import '@ionic/vue/css/core.css';
@@ -37,9 +38,10 @@ import './theme/variables.css';
 
 const app = createApp(App)
   .use(IonicVue)
+  .use(i18n)
   .use(router);
 
-router.isReady().then(() => {
+Promise.all([setupI18nLocale(), router.isReady()]).then(() => {
   initializeNotificationActionRouter(router);
   app.mount('#app');
 });

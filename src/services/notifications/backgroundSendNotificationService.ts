@@ -1,6 +1,7 @@
 import type { LocalNotificationSchema } from '@capacitor/local-notifications';
 import { scheduleLocalNotification } from '@/services/notifications/localNotifications';
 import type { SendStats } from '@/services/messages/backgroundSendController';
+import { tr } from '@/i18n/translate';
 
 const BACKGROUND_SEND_NOTIFICATION_ID = 6201;
 const BACKGROUND_SEND_GROUP = 'gmast-background-send';
@@ -18,19 +19,27 @@ const baseNotification = (): Pick<LocalNotificationSchema, 'id' | 'group' | 'ext
 
 const formatProgressBody = (stats: SendStats): string => {
   if (!stats.total) {
-    return 'Đang chờ hàng đợi...';
+    return tr('notifications.backgroundSend.waitingQueue');
   }
 
   const percent = Math.min(100, Math.round((stats.attempted / stats.total) * 100));
-  return `Đã xử lý ${stats.attempted}/${stats.total} tin · ${stats.sent} thành công · ${stats.skipped} bỏ qua · ${percent}%`;
+  return tr('notifications.backgroundSend.progressBody', {
+    attempted: stats.attempted,
+    total: stats.total,
+    sent: stats.sent,
+    skipped: stats.skipped,
+    percent
+  });
 };
 
 export const backgroundSendNotificationService = {
   async showStart(total: number): Promise<void> {
     await scheduleLocalNotification({
       ...baseNotification(),
-      title: 'Đang chuẩn bị gửi nền',
-      body: total > 0 ? `Đang chuẩn bị ${total} tin nhắn...` : 'Không có tin nhắn nào trong hàng chờ.',
+      title: tr('notifications.backgroundSend.preparingTitle'),
+      body: total > 0
+        ? tr('notifications.backgroundSend.preparingBody', { total })
+        : tr('notifications.backgroundSend.preparingEmptyBody'),
       ongoing: true,
       autoCancel: false
     });
@@ -39,7 +48,9 @@ export const backgroundSendNotificationService = {
   async updateProgress(stats: SendStats): Promise<void> {
     await scheduleLocalNotification({
       ...baseNotification(),
-      title: stats.cancelled ? 'Đang dừng gửi nền' : 'Gửi nền đang chạy',
+      title: stats.cancelled
+        ? tr('notifications.backgroundSend.stoppingTitle')
+        : tr('notifications.backgroundSend.runningTitle'),
       body: formatProgressBody(stats),
       ongoing: true,
       autoCancel: false
@@ -49,10 +60,17 @@ export const backgroundSendNotificationService = {
   async showCompletion(stats: SendStats): Promise<void> {
     await scheduleLocalNotification({
       ...baseNotification(),
-      title: stats.cancelled ? 'Đã dừng gửi nền' : 'Hoàn tất gửi nền',
+      title: stats.cancelled
+        ? tr('notifications.backgroundSend.stoppedTitle')
+        : tr('notifications.backgroundSend.completedTitle'),
       body: stats.total
-        ? `Gửi ${stats.attempted}/${stats.total} tin · Thành công ${stats.sent}, bỏ qua ${stats.skipped}.`
-        : 'Không có tin nào để xử lý.',
+        ? tr('notifications.backgroundSend.completedBody', {
+            attempted: stats.attempted,
+            total: stats.total,
+            sent: stats.sent,
+            skipped: stats.skipped
+          })
+        : tr('notifications.backgroundSend.emptyResultBody'),
       ongoing: false,
       autoCancel: true
     });
@@ -61,8 +79,8 @@ export const backgroundSendNotificationService = {
   async showError(error: Error): Promise<void> {
     await scheduleLocalNotification({
       ...baseNotification(),
-      title: 'Gửi nền gặp lỗi',
-      body: error.message ?? 'Không xác định được lỗi.',
+      title: tr('notifications.backgroundSend.errorTitle'),
+      body: error.message ?? tr('notifications.backgroundSend.unknownError'),
       ongoing: false,
       autoCancel: true
     });
