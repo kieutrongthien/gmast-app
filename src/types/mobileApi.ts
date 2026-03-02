@@ -1,4 +1,4 @@
-export type SmsScheduleStatus = 'pending' | 'failed' | 'sent';
+export type SmsScheduleStatus = 'pending' | 'failed' | 'sent' | 'processing';
 
 export interface MobileLoginRequest {
   username: string;

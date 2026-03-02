@@ -40,6 +40,7 @@ export const backgroundSendNotificationService = {
       body: total > 0
         ? tr('notifications.backgroundSend.preparingBody', { total })
         : tr('notifications.backgroundSend.preparingEmptyBody'),
+      sound: undefined,
       ongoing: true,
       autoCancel: false
     });
@@ -52,6 +53,7 @@ export const backgroundSendNotificationService = {
         ? tr('notifications.backgroundSend.stoppingTitle')
         : tr('notifications.backgroundSend.runningTitle'),
       body: formatProgressBody(stats),
+      sound: undefined,
       ongoing: true,
       autoCancel: false
     });

@@ -139,11 +139,28 @@ const readNumber = (record: QueueApiRecord, ...keys: string[]): number | null =>
   return null;
 };
 
+const readPositiveInteger = (record: QueueApiRecord, ...keys: string[]): number | null => {
+  const value = readNumber(record, ...keys);
+  if (value === null) {
+    return null;
+  }
+
+  const normalized = Math.trunc(value);
+  if (!Number.isFinite(normalized) || normalized <= 0) {
+    return null;
+  }
+
+  return normalized;
+};
+
 const normalizeRecord = (record: QueueApiRecord): QueueMessage => {
   const now = new Date().toISOString();
   const createdAt = readString(record, 'created_at', 'createdAt') ?? now;
   const updatedAt = readString(record, 'updated_at', 'updatedAt') ?? createdAt;
-  const messageId = readString(record, 'id', 'sms_schedule_id') ?? crypto.randomUUID();
+  const numericId = readPositiveInteger(record, 'sms_schedule_id', 'smsScheduleId', 'schedule_id', 'id');
+  const messageId = numericId !== null
+    ? String(numericId)
+    : (readString(record, 'id', 'sms_schedule_id') ?? crypto.randomUUID());
 
   return {
     id: messageId,

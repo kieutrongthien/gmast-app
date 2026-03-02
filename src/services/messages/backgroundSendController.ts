@@ -163,7 +163,6 @@ export class BackgroundSendController {
         cancelled: this.stopRequested
       };
       statsState.value = snapshot;
-      await this.deps.notifyProgress(snapshot);
     };
 
     const dispatcherOptions: SendDispatcherOptions = {

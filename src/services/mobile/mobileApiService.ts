@@ -38,9 +38,40 @@ const pickString = (...values: unknown[]): string | null => {
   return null;
 };
 
+const pickPositiveInteger = (...values: unknown[]): number | null => {
+  for (const value of values) {
+    if (typeof value === 'number' && Number.isInteger(value) && value > 0) {
+      return value;
+    }
+
+    if (typeof value === 'string') {
+      const normalized = value.trim();
+      if (!/^\d+$/.test(normalized)) {
+        continue;
+      }
+
+      const parsed = Number.parseInt(normalized, 10);
+      if (Number.isInteger(parsed) && parsed > 0) {
+        return parsed;
+      }
+    }
+  }
+
+  return null;
+};
+
+const resolveScheduleIdParam = (id: string | number, operation: string): number => {
+  const numericId = pickPositiveInteger(id);
+  if (!numericId) {
+    throw new Error(`${operation} requires a positive integer id`);
+  }
+  return numericId;
+};
+
 const normalizeScheduleRecord = (value: unknown, fallbackId: string): SmsScheduleRecord => {
   const raw = asRecord(value);
-  const id = pickString(raw.id, raw.uuid, raw.sms_schedule_id) ?? fallbackId;
+  const numericId = pickPositiveInteger(raw.sms_schedule_id, raw.smsScheduleId, raw.schedule_id, raw.id);
+  const id = numericId ? String(numericId) : (pickString(raw.id, raw.uuid) ?? fallbackId);
 
   return {
     ...raw,
@@ -180,35 +211,31 @@ export const getSmsSchedules = async (token?: string): Promise<SmsScheduleListRe
   };
 };
 
-export const getSmsScheduleDetail = async (id: string, token?: string): Promise<SmsScheduleDetailResponse> => {
-  if (!id.trim()) {
-    throw new Error('getSmsScheduleDetail requires id');
-  }
+export const getSmsScheduleDetail = async (id: string | number, token?: string): Promise<SmsScheduleDetailResponse> => {
+  const scheduleId = resolveScheduleIdParam(id, 'getSmsScheduleDetail');
 
   const headers = await resolveAuthHeaders(token);
-  const { data } = await httpClient.get<Record<string, unknown>>(`${SMS_SCHEDULES_ENDPOINT}/${id}`, {
+  const { data } = await httpClient.get<Record<string, unknown>>(`${SMS_SCHEDULES_ENDPOINT}/${scheduleId}`, {
     headers
   });
   const raw = asRecord(data);
 
   return {
-    item: extractDetail(raw, id),
+    item: extractDetail(raw, String(scheduleId)),
     raw
   };
 };
 
 export const updateSmsScheduleStatus = async (
-  id: string,
+  id: string | number,
   payload: SmsScheduleStatusUpdateRequest,
   token?: string
 ): Promise<SmsScheduleStatusUpdateResponse> => {
-  if (!id.trim()) {
-    throw new Error('updateSmsScheduleStatus requires id');
-  }
+  const scheduleId = resolveScheduleIdParam(id, 'updateSmsScheduleStatus');
 
   const headers = await resolveAuthHeaders(token);
   const { data } = await httpClient.patch<Record<string, unknown>>(
-    `${SMS_SCHEDULES_ENDPOINT}/${id}/status`,
+    `${SMS_SCHEDULES_ENDPOINT}/${scheduleId}/status`,
     {
       status: payload.status,
       retry_increment: payload.retry_increment

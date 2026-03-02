@@ -13,7 +13,10 @@ const toRemotePayload = (record: Record<string, unknown>): RemoteMessageStatusRe
       : 'unknown';
 
   return {
-    id: typeof record.id === 'string' ? record.id : undefined,
+    id:
+      typeof record.id === 'string'
+        ? record.id
+        : (typeof record.id === 'number' && Number.isFinite(record.id) ? String(record.id) : undefined),
     status: statusValue,
     updated_at: typeof record.updated_at === 'string' ? record.updated_at : undefined,
     updatedAt: typeof record.updatedAt === 'string' ? record.updatedAt : undefined,
