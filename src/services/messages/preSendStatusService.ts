@@ -1,8 +1,8 @@
-import axios from 'axios';
 import { withRetry } from '@/utils/retry';
 import type { RemoteMessageStatusResponse, PreSendStatusResult } from '@/types/messageStatus';
 import { PreSendState } from '@/types/messageStatus';
 import { getSmsScheduleDetail } from '@/services/mobile';
+import { isHttpError } from '@/lib/httpClient';
 
 const toBoolean = (value?: boolean): boolean => Boolean(value);
 
@@ -105,8 +105,8 @@ export const checkPreSendStatus = async (messageId: string): Promise<PreSendStat
     const payload = toRemotePayload(detail.item);
     return normalizeResponse(messageId, payload);
   } catch (error) {
-    if (axios.isAxiosError(error)) {
-      if (error.response?.status === 404) {
+    if (isHttpError(error)) {
+      if (error.response.status === 404) {
         return notFoundResult(messageId);
       }
       if (typeof navigator !== 'undefined' && navigator && navigator.onLine === false) {

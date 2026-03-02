@@ -2,7 +2,7 @@ import { withRetry } from '@/utils/retry';
 import { updateSmsScheduleStatus } from '@/services/mobile';
 import type { DeliveryResultPayload, DeliveryResultResponse } from '@/types/messageResult';
 import type { SmsScheduleStatus } from '@/types/mobileApi';
-import axios from 'axios';
+import { isHttpError } from '@/lib/httpClient';
 
 const DEFAULT_ATTEMPTS = 3;
 
@@ -21,7 +21,7 @@ const toScheduleStatus = (outcome: DeliveryResultPayload['outcome']): 'pending' 
 };
 
 const isInvalidTransition = (error: unknown): boolean => {
-  if (!axios.isAxiosError(error) || error.response?.status !== 422) {
+  if (!isHttpError(error) || error.response.status !== 422) {
     return false;
   }
 
@@ -33,7 +33,6 @@ const isInvalidTransition = (error: unknown): boolean => {
 const buildTransitionPlans = (targetStatus: SmsScheduleStatus): SmsScheduleStatus[][] => {
   if (targetStatus === 'sent') {
     return [
-      ['sent'],
       ['processing', 'sent'],
       ['pending', 'processing', 'sent']
     ];
@@ -41,7 +40,6 @@ const buildTransitionPlans = (targetStatus: SmsScheduleStatus): SmsScheduleStatu
 
   if (targetStatus === 'failed') {
     return [
-      ['failed'],
       ['processing', 'failed'],
       ['pending', 'processing', 'failed']
     ];
@@ -62,10 +60,18 @@ const applyStatusPlan = async (
   for (let index = 0; index < plan.length; index += 1) {
     const status = plan[index];
     const isFinalStep = index === plan.length - 1;
-    await updateSmsScheduleStatus(messageId, {
-      status,
-      retry_increment: isFinalStep && status === 'failed' ? retryIncrementOnFailure : false
-    });
+
+    try {
+      await updateSmsScheduleStatus(messageId, {
+        status,
+        retry_increment: isFinalStep && status === 'failed' ? retryIncrementOnFailure : false
+      });
+    } catch (error) {
+      if (isInvalidTransition(error) && !isFinalStep) {
+        continue;
+      }
+      throw error;
+    }
   }
 };
 

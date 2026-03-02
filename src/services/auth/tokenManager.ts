@@ -1,9 +1,8 @@
-import axios from 'axios';
 import { Preferences } from '@capacitor/preferences';
 import { appConfig } from '@/config/appConfig';
+import { httpClient } from '@/lib/httpClient';
 
 const TOKEN_STORAGE_KEY = 'gmast::auth-token';
-const authHttp = axios.create({ timeout: 12000 });
 
 export interface AuthToken {
   token: string;
@@ -94,7 +93,7 @@ const fetchRemoteToken = async (): Promise<AuthToken> => {
     payload.scope = appConfig.auth.scope;
   }
 
-  const { data } = await authHttp.post<TokenEndpointResponse>(resolveTokenEndpoint(), payload, {
+  const { data } = await httpClient.post<TokenEndpointResponse>(resolveTokenEndpoint(), payload, {
     headers: { 'Content-Type': 'application/json' }
   });
 

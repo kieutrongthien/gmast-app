@@ -1,9 +1,8 @@
-import type { AxiosRequestConfig } from 'axios';
 import { App } from '@capacitor/app';
 import { Capacitor } from '@capacitor/core';
 import { Preferences } from '@capacitor/preferences';
 import { appConfig } from '@/config/appConfig';
-import { httpClient } from '@/lib/httpClient';
+import { httpClient, type HttpHeaders } from '@/lib/httpClient';
 import { ensureAccessToken, buildAuthorizationHeader } from '@/services/auth/tokenManager';
 import { withRetry } from '@/utils/retry';
 import type {
@@ -293,7 +292,7 @@ const fetchVersionPayload = async (
   build: string | null
 ): Promise<AppVersionApiResponse> => {
   const authToken = await ensureAccessToken();
-  const headers: AxiosRequestConfig['headers'] = {};
+  const headers: HttpHeaders = {};
   const authorization = buildAuthorizationHeader(authToken);
   if (authorization) {
     headers.Authorization = authorization;

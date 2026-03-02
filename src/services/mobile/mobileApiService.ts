@@ -1,5 +1,4 @@
-import type { AxiosRequestConfig } from 'axios';
-import { httpClient } from '@/lib/httpClient';
+import { httpClient, type HttpHeaders } from '@/lib/httpClient';
 import {
   ensureAccessToken,
   buildAuthorizationHeader,
@@ -89,8 +88,8 @@ const resolveAuthorizationHeader = async (token?: string): Promise<string | null
   return buildAuthorizationHeader(authToken);
 };
 
-const resolveAuthHeaders = async (token?: string): Promise<AxiosRequestConfig['headers']> => {
-  const headers: AxiosRequestConfig['headers'] = {
+const resolveAuthHeaders = async (token?: string): Promise<HttpHeaders> => {
+  const headers: HttpHeaders = {
     Accept: 'application/json'
   };
 
@@ -240,7 +239,12 @@ export const updateSmsScheduleStatus = async (
       status: payload.status,
       retry_increment: payload.retry_increment
     },
-    { headers }
+    {
+      headers: {
+        ...headers,
+        'Content-Type': 'application/json'
+      }
+    }
   );
 
   return {
