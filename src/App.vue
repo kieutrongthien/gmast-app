@@ -57,6 +57,7 @@ import {
   ensureStartupPermissions,
   getStartupPermissionDebugSnapshot
 } from '@/services/permissions/startupPermissionService';
+import { openSmsPermissionSettings } from '@/services/permissions/smsSendPermissionService';
 import { authStore } from '@/stores/authStore';
 
 const { t } = useI18n();
@@ -154,15 +155,7 @@ const verifyStartupPermissions = async (): Promise<boolean> => {
 };
 
 const openAppSettings = async (): Promise<void> => {
-  if (!Capacitor.isNativePlatform()) {
-    return;
-  }
-
-  try {
-    await AppPlugin.openSettings();
-  } catch (error) {
-    console.warn('[App] failed to open app settings', error);
-  }
+  await openSmsPermissionSettings();
 };
 
 const ensurePostPermissionReady = async (): Promise<void> => {

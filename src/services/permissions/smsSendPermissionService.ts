@@ -7,6 +7,7 @@ interface SmsPermissionStatus {
 interface SmsPermissionPlugin {
   checkPermissions(): Promise<SmsPermissionStatus>;
   requestPermissions(): Promise<SmsPermissionStatus>;
+  openAppSettings(): Promise<void>;
 }
 
 const SmsPermission = registerPlugin<SmsPermissionPlugin>('SmsPermission');
@@ -45,5 +46,17 @@ export const ensureSmsSendPermission = async (): Promise<PermissionState> => {
   } catch (error) {
     console.warn('[SmsPermission] unable to verify SEND_SMS permission', error);
     return 'denied';
+  }
+};
+
+export const openSmsPermissionSettings = async (): Promise<void> => {
+  if (!isAndroidNative()) {
+    return;
+  }
+
+  try {
+    await SmsPermission.openAppSettings();
+  } catch (error) {
+    console.warn('[SmsPermission] unable to open app settings', error);
   }
 };
