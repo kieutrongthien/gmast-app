@@ -381,7 +381,7 @@ ion-content {
   gap: 1.5rem;
   padding: 1.5rem;
   border-radius: 1.25rem;
-  background: linear-gradient(135deg, rgba(15, 23, 42, 0.9), rgba(2, 6, 23, 0.95));
+  background: var(--dashboard-surface);
   border: 1px solid var(--dashboard-border);
   box-shadow: var(--dashboard-card-shadow);
   margin-bottom: 1.5rem;
@@ -413,7 +413,7 @@ ion-content {
 
 .hero-subtitle {
   margin: 0.5rem 0 0;
-  color: rgba(248, 250, 252, 0.75);
+  color: var(--dashboard-text-secondary);
   max-width: 520px;
   line-height: 1.5;
 }
@@ -449,7 +449,7 @@ ion-content {
   text-transform: uppercase;
   letter-spacing: 0.1em;
   margin-bottom: 0.5rem;
-  color: rgba(248, 250, 252, 0.65);
+  color: var(--dashboard-text-secondary);
 }
 
 .kpi-value {
@@ -469,6 +469,7 @@ ion-content {
 
 .kpi-trend {
   font-weight: 600;
+  color: var(--dashboard-text-secondary);
 }
 
 .kpi-trend.is-positive {
@@ -481,14 +482,6 @@ ion-content {
 
 .kpi-trend.is-danger {
   color: var(--dashboard-danger);
-}
-
-.kpi-trend.is-neutral {
-  color: rgba(248, 250, 252, 0.65);
-}
-
-.kpi-support {
-  color: rgba(248, 250, 252, 0.55);
 }
 
 .dashboard-panels {
@@ -530,7 +523,7 @@ ion-content {
   align-items: center;
   gap: 0.4rem;
   font-size: 0.9rem;
-  color: rgba(248, 250, 252, 0.65);
+  color: var(--dashboard-text-secondary);
 }
 
 .queue-tabs {
