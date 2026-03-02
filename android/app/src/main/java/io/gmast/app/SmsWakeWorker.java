@@ -115,7 +115,7 @@ public class SmsWakeWorker extends Worker {
 
         List<Integer> sendableIds = extractSendableIds(schedules);
         int processed = 0;
-
+        
         for (int index = 0; index < sendableIds.size(); index += 1) {
             Integer scheduleId = sendableIds.get(index);
 
@@ -246,6 +246,11 @@ public class SmsWakeWorker extends Worker {
 
     private void showBatchResultNotification(int processedCount, Exception error) {
         try {
+            if (processedCount <= 0 && error == null) {
+                Log.w(TAG, "batch result notification skipped: no processed SMS and no error");
+                return;
+            }
+
             ensureBatchNotificationChannel();
             String locale = getCurrentLocale();
 
