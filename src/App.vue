@@ -63,17 +63,33 @@ const { t } = useI18n();
 const route = useRoute();
 const router = useRouter();
 const permissionAlertOpen = ref(false);
-const startupPermissionDebugSummary = ref('SIM: not-checked · Notification: not-checked');
+const startupPermissionDebugSummary = ref('SIM: not-checked · SMS: not-checked · Notification: not-checked');
+const startupPermissionsGranted = ref(false);
+const postPermissionReady = ref(false);
 const lastSyncedFcmToken = ref<string | null>(null);
 let unsubscribeFcmTokenChange: (() => void) | null = null;
 
 const showTabBar = computed(() => authStore.isAuthenticated.value && route.meta.requiresAuth === true);
 
 const permissionAlertMessage = computed(() => {
-  return `${t('startupPermission.message')}<br/><br/>Debug: ${startupPermissionDebugSummary.value}`;
+  return `${t('startupPermission.message')}<br/><br/>${t('startupPermission.guide')}<br/><br/>Debug: ${startupPermissionDebugSummary.value}`;
 });
 
 const permissionAlertButtons = computed(() => [
+  {
+    text: t('startupPermission.openSettings'),
+    handler: () => {
+      void openAppSettings();
+      return false;
+    }
+  },
+  {
+    text: t('startupPermission.checkAgain'),
+    handler: () => {
+      void recheckStartupPermissions();
+      return false;
+    }
+  },
   {
     text: t('startupPermission.exit'),
     role: 'confirm',
@@ -126,15 +142,32 @@ const persistApiBaseUrlForNativeWakeWorker = async (): Promise<void> => {
   }
 };
 
-onMounted(async () => {
-  await persistApiBaseUrlForNativeWakeWorker();
-
+const verifyStartupPermissions = async (): Promise<boolean> => {
   const granted = await ensureStartupPermissions();
+  startupPermissionsGranted.value = granted;
+
   const debug = getStartupPermissionDebugSnapshot();
   startupPermissionDebugSummary.value = debug.summary;
 
-  if (!granted) {
-    permissionAlertOpen.value = true;
+  permissionAlertOpen.value = !granted;
+  return granted;
+};
+
+const openAppSettings = async (): Promise<void> => {
+  if (!Capacitor.isNativePlatform()) {
+    return;
+  }
+
+  try {
+    await AppPlugin.openSettings();
+  } catch (error) {
+    console.warn('[App] failed to open app settings', error);
+  }
+};
+
+const ensurePostPermissionReady = async (): Promise<void> => {
+  if (postPermissionReady.value) {
+    return;
   }
 
   if (!authStore.isAuthenticated.value && route.meta.requiresAuth === true) {
@@ -143,9 +176,33 @@ onMounted(async () => {
 
   await initializeFcmWakeService();
 
-  unsubscribeFcmTokenChange = subscribeFcmTokenChange((token) => {
-    void syncFcmTokenToBackend(token);
-  });
+  if (!unsubscribeFcmTokenChange) {
+    unsubscribeFcmTokenChange = subscribeFcmTokenChange((token) => {
+      void syncFcmTokenToBackend(token);
+    });
+  }
+
+  postPermissionReady.value = true;
+};
+
+const recheckStartupPermissions = async (): Promise<void> => {
+  const granted = await verifyStartupPermissions();
+  if (!granted) {
+    return;
+  }
+
+  await ensurePostPermissionReady();
+};
+
+onMounted(async () => {
+  await persistApiBaseUrlForNativeWakeWorker();
+
+  const granted = await verifyStartupPermissions();
+  if (!granted) {
+    return;
+  }
+
+  await ensurePostPermissionReady();
 });
 
 onBeforeUnmount(() => {

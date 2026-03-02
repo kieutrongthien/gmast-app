@@ -180,7 +180,10 @@ const ko = {
   },
   startupPermission: {
     title: '권한 필요',
-    message: '앱을 정상적으로 사용하려면 SIM 및 알림 권한이 필요합니다. 권한 허용 후 앱을 다시 실행하세요.',
+    message: '앱을 정상적으로 사용하려면 SIM, SMS, 알림 권한이 필요합니다.',
+    guide: '"설정 열기"를 눌러 권한을 허용한 뒤 "다시 확인"을 누르세요. 모든 필수 권한을 허용해야 앱을 계속 사용할 수 있습니다.',
+    openSettings: '설정 열기',
+    checkAgain: '다시 확인',
     exit: '앱 종료'
   },
   notifications: {

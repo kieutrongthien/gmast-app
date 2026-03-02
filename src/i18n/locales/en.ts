@@ -181,7 +181,11 @@ const en = {
   startupPermission: {
     title: 'Permission Required',
     message:
-      'This app requires SIM and notification permissions to operate correctly. Please grant permissions and reopen the app.',
+      'This app requires SIM, SMS, and notification permissions to operate correctly.',
+    guide:
+      'Tap "Open Settings" to grant permissions, then tap "Check Again". You cannot continue until all required permissions are granted.',
+    openSettings: 'Open Settings',
+    checkAgain: 'Check Again',
     exit: 'Exit App'
   },
   notifications: {
