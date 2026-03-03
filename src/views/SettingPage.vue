@@ -66,8 +66,7 @@ import {
   IonSelectOption,
   IonToggle,
   IonTitle,
-  IonToolbar,
-  IonInput
+  IonToolbar
 } from '@ionic/vue';
 import type { SelectChangeEventDetail } from '@ionic/core';
 import { onMounted, ref } from 'vue';
@@ -85,41 +84,6 @@ const { t, locale } = useI18n();
 const router = useRouter();
 const currentLocale = computed(() => locale.value as AppLocale);
 const smsWakeWorkerEnabled = ref(true);
-
-const pickString = (value: unknown): string | null => {
-  if (typeof value === 'string' && value.trim().length > 0) {
-    return value.trim();
-  }
-
-  if (typeof value === 'number' && Number.isFinite(value)) {
-    return String(value);
-  }
-
-  return null;
-};
-
-const profile = computed(() => authStore.userProfile.value ?? {});
-const fallbackText = computed(() => t('setting.unknownUser'));
-
-const displayName = computed(() => {
-  return (
-    pickString(profile.value.name)
-    ?? pickString(profile.value.full_name)
-    ?? pickString(profile.value.display_name)
-    ?? pickString(profile.value.user_name)
-    ?? pickString(profile.value.username)
-    ?? fallbackText.value
-  );
-});
-
-const displayUsername = computed(() => {
-  return (
-    pickString(profile.value.username)
-    ?? pickString(profile.value.user_name)
-    ?? authStore.username.value
-    ?? fallbackText.value
-  );
-});
 
 const handleLocaleChange = async (event: CustomEvent<SelectChangeEventDetail>) => {
   const value = event.detail.value;

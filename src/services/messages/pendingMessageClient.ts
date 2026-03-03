@@ -208,19 +208,33 @@ const deriveMetaFromPayload = (
   currentCount: number
 ): QueuePageMeta => {
   const directMeta = asRecord(payload.meta);
-  const nestedMeta = asRecord(asRecord(payload.data).meta);
-  const metaSource = Object.keys(directMeta).length > 0 ? directMeta : nestedMeta;
+  const dataRecord = asRecord(payload.data);
+  const nestedMeta = asRecord(dataRecord.meta);
+  const rootMeta = asRecord(payload.pagination);
 
-  const metaPage = readPositiveInteger(metaSource, 'page') ?? page;
-  const metaPageSize = readPositiveInteger(metaSource, 'per_page', 'pageSize', 'perPage') ?? pageSize;
+  const metaSource = {
+    ...payload,
+    ...dataRecord,
+    ...rootMeta,
+    ...nestedMeta,
+    ...directMeta
+  };
+
+  const metaPage = readPositiveInteger(metaSource, 'page', 'current_page', 'currentPage') ?? page;
+  const metaPageSize =
+    readPositiveInteger(metaSource, 'per_page', 'pageSize', 'perPage', 'limit') ?? pageSize;
   const metaTotalItems = readPositiveInteger(metaSource, 'total', 'totalItems', 'count') ?? currentCount;
   const totalPages =
-    readPositiveInteger(metaSource, 'totalPages', 'last_page')
+    readPositiveInteger(metaSource, 'totalPages', 'total_pages', 'total_page', 'last_page', 'lastPage')
     ?? Math.max(1, Math.ceil(metaTotalItems / Math.max(1, metaPageSize)));
 
-  const hasNextExplicit = metaSource.hasOwnProperty('hasNext')
+  const hasNextExplicit = Object.prototype.hasOwnProperty.call(metaSource, 'hasNext')
     ? Boolean(metaSource.hasNext)
-    : (metaSource.hasOwnProperty('hasMore') ? Boolean(metaSource.hasMore) : null);
+    : (Object.prototype.hasOwnProperty.call(metaSource, 'hasMore')
+      ? Boolean(metaSource.hasMore)
+      : (Object.prototype.hasOwnProperty.call(metaSource, 'next_page_url')
+        ? Boolean(metaSource.next_page_url)
+        : null));
 
   const hasNextPage = hasNextExplicit === null ? metaPage < totalPages : hasNextExplicit;
   return buildMeta(metaTotalItems, metaPage, metaPageSize, totalPages, hasNextPage);
