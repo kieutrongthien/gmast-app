@@ -472,6 +472,7 @@ ion-content {
   align-items: center;
   gap: 0.5rem;
   color: var(--dashboard-text-secondary);
+  padding: .75rem;
 }
 
 @media (max-width: 680px) {
