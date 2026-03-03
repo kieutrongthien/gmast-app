@@ -5,13 +5,8 @@ import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.content.Context;
 import android.content.Intent;
-import android.content.SharedPreferences;
-import android.content.pm.PackageManager;
 import android.os.Build;
 import android.os.PowerManager;
-import android.telephony.SmsManager;
-import android.telephony.SubscriptionInfo;
-import android.telephony.SubscriptionManager;
 import android.util.Log;
 
 import androidx.annotation.NonNull;
@@ -23,13 +18,6 @@ import androidx.work.WorkerParameters;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
-import java.io.BufferedReader;
-import java.io.DataOutputStream;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.net.HttpURLConnection;
-import java.net.URL;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
@@ -39,11 +27,6 @@ public class SmsWakeWorker extends Worker {
     private static final String PREF_NAME = "sms_wake_debug";
     private static final String PREF_LAST_PAYLOAD = "last_payload";
     private static final String PREF_LAST_TS = "last_timestamp";
-    private static final String CAPACITOR_STORAGE = "CapacitorStorage";
-    private static final String AUTH_SESSION_KEY = "gmast::auth-session";
-    private static final String API_BASE_URL_KEY = "gmast::api-base-url";
-    private static final String SEND_CONFIG_KEY = "gmast::send-config";
-    private static final String LOCALE_KEY = "gmast::locale";
     private static final long MIN_SMS_INTERVAL_MS = 3_000L;
     private static final long MAX_SMS_INTERVAL_MS = 5_000L;
     private static final String BATCH_NOTIFICATION_CHANNEL_ID = "sms_batch_result_channel";
@@ -68,20 +51,6 @@ public class SmsWakeWorker extends Worker {
         }
     }
 
-    private static class SendConfigSnapshot {
-        final String simMode;
-        final String simSlotId;
-
-        SendConfigSnapshot(String simMode, String simSlotId) {
-            this.simMode = "manual".equals(simMode) ? "manual" : "random";
-            this.simSlotId = simSlotId;
-        }
-
-        boolean isManualMode() {
-            return "manual".equals(simMode) && simSlotId != null;
-        }
-    }
-
     public SmsWakeWorker(@NonNull Context context, @NonNull WorkerParameters workerParams) {
         super(context, workerParams);
     }
@@ -102,7 +71,7 @@ public class SmsWakeWorker extends Worker {
                 wakeLock.acquire(10 * 60_000L);
             }
 
-            SharedPreferences preferences = getApplicationContext().getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE);
+            android.content.SharedPreferences preferences = getApplicationContext().getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE);
             preferences.edit()
                 .putString(PREF_LAST_PAYLOAD, rawData)
                 .putLong(PREF_LAST_TS, System.currentTimeMillis())
@@ -133,7 +102,7 @@ public class SmsWakeWorker extends Worker {
     }
 
     private int processWakeBatch() throws Exception {
-        SessionConfig session = readSessionConfig();
+        AppStorageHelper.SessionConfig session = AppStorageHelper.readSessionConfig(getApplicationContext(), TAG);
         if (session == null) {
             Log.w(TAG, "processWakeBatch skipped: missing api base url or auth session");
             return 0;
@@ -146,7 +115,7 @@ public class SmsWakeWorker extends Worker {
         }
 
         List<PendingSmsTask> sendableTasks = extractSendableTasks(schedules);
-        SendConfigSnapshot sendConfig = readSendConfig();
+        AppStorageHelper.SendConfigSnapshot sendConfig = AppStorageHelper.readSendConfig(getApplicationContext(), TAG);
         int processed = 0;
 
         for (int index = 0; index < sendableTasks.size(); index += 1) {
@@ -164,31 +133,13 @@ public class SmsWakeWorker extends Worker {
         return processed;
     }
 
-    private SessionConfig readSessionConfig() {
-        SharedPreferences storage = getApplicationContext().getSharedPreferences(CAPACITOR_STORAGE, Context.MODE_PRIVATE);
-        String apiBaseUrl = trim(storage.getString(API_BASE_URL_KEY, null));
-        String rawSession = storage.getString(AUTH_SESSION_KEY, null);
-
-        if (apiBaseUrl == null || rawSession == null) {
-            return null;
-        }
-
-        try {
-            JSONObject session = new JSONObject(rawSession);
-            String token = trim(session.optString("token", null));
-            if (token == null) {
-                return null;
-            }
-
-            return new SessionConfig(apiBaseUrl, token);
-        } catch (Exception exception) {
-            Log.w(TAG, "failed to parse auth session", exception);
-            return null;
-        }
-    }
-
-    private JSONArray fetchScheduleList(SessionConfig session) throws Exception {
-        JSONObject payload = executeRequest("GET", session.baseUrl + "/sms-schedules?status=pending", session.token, null);
+    private JSONArray fetchScheduleList(AppStorageHelper.SessionConfig session) throws Exception {
+        JSONObject payload = HttpJsonHelper.requestJson(
+            "GET",
+            session.baseUrl + "/sms-schedules?status=pending",
+            session.token,
+            null
+        );
 
         Object directData = payload.opt("data");
         if (directData instanceof JSONArray) {
@@ -252,7 +203,11 @@ public class SmsWakeWorker extends Worker {
         return tasks;
     }
 
-    private boolean processSingleSchedule(SessionConfig session, PendingSmsTask task, SendConfigSnapshot sendConfig) {
+    private boolean processSingleSchedule(
+        AppStorageHelper.SessionConfig session,
+        PendingSmsTask task,
+        AppStorageHelper.SendConfigSnapshot sendConfig
+    ) {
         boolean movedToProcessing = transitionScheduleStatus(session, task.scheduleId, "processing", false);
         if (!movedToProcessing) {
             Log.w(TAG, "schedule " + task.scheduleId + " could not move to processing");
@@ -271,7 +226,7 @@ public class SmsWakeWorker extends Worker {
     }
 
     private boolean transitionScheduleStatus(
-        SessionConfig session,
+        AppStorageHelper.SessionConfig session,
         int scheduleId,
         String targetStatus,
         boolean retryIncrementOnFailure
@@ -289,7 +244,7 @@ public class SmsWakeWorker extends Worker {
                 requestBody.put("status", next);
                 requestBody.put("retry_increment", "failed".equals(next) && retryIncrementOnFailure);
 
-                executeRequest(
+                HttpJsonHelper.requestJson(
                     "PATCH",
                     session.baseUrl + "/sms-schedules/" + scheduleId + "/status",
                     session.token,
@@ -306,142 +261,25 @@ public class SmsWakeWorker extends Worker {
         return false;
     }
 
-    private boolean sendSmsUsingConfig(PendingSmsTask task, SendConfigSnapshot sendConfig) {
-        if (!hasSmsPermission()) {
-            Log.w(TAG, "SEND_SMS permission denied, cannot send schedule=" + task.scheduleId);
-            return false;
-        }
+    private boolean sendSmsUsingConfig(
+        PendingSmsTask task,
+        AppStorageHelper.SendConfigSnapshot sendConfig
+    ) {
+        boolean sent = SmsDispatchHelper.sendSms(
+            getApplicationContext(),
+            task.receiver,
+            task.message,
+            sendConfig,
+            TAG
+        );
 
-        SmsManager smsManager = resolveSmsManager(sendConfig);
-        if (smsManager == null) {
-            Log.w(TAG, "unable to resolve SmsManager for schedule=" + task.scheduleId);
-            return false;
-        }
-
-        try {
-            ArrayList<String> parts = smsManager.divideMessage(task.message);
-            if (parts.size() > 1) {
-                smsManager.sendMultipartTextMessage(task.receiver, null, parts, null, null);
-            } else {
-                smsManager.sendTextMessage(task.receiver, null, task.message, null, null);
-            }
-
+        if (sent) {
             Log.w(TAG, "sms sent schedule=" + task.scheduleId + " receiver=" + task.receiver);
-            return true;
-        } catch (Exception exception) {
-            Log.w(TAG, "failed to send sms schedule=" + task.scheduleId, exception);
-            return false;
-        }
-    }
-
-    private boolean hasSmsPermission() {
-        return getApplicationContext().checkSelfPermission(Manifest.permission.SEND_SMS)
-            == PackageManager.PERMISSION_GRANTED;
-    }
-
-    private SmsManager resolveSmsManager(SendConfigSnapshot sendConfig) {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.LOLLIPOP_MR1) {
-            return SmsManager.getDefault();
+        } else {
+            Log.w(TAG, "failed to send sms schedule=" + task.scheduleId);
         }
 
-        Integer subscriptionId = resolveSubscriptionId(sendConfig);
-        if (subscriptionId != null) {
-            try {
-                return SmsManager.getSmsManagerForSubscriptionId(subscriptionId);
-            } catch (Exception exception) {
-                Log.w(TAG, "failed to resolve SmsManager for subscriptionId=" + subscriptionId, exception);
-            }
-        }
-
-        return SmsManager.getDefault();
-    }
-
-    private Integer resolveSubscriptionId(SendConfigSnapshot sendConfig) {
-        List<SubscriptionInfo> activeSubscriptions = getActiveSubscriptions();
-        if (activeSubscriptions.isEmpty()) {
-            return null;
-        }
-
-        if (sendConfig.isManualMode()) {
-            Integer manualId = resolveManualSubscriptionId(sendConfig.simSlotId, activeSubscriptions);
-            if (manualId != null) {
-                return manualId;
-            }
-            Log.w(TAG, "manual SIM config not found, fallback to random");
-        }
-
-        int randomIndex = ThreadLocalRandom.current().nextInt(activeSubscriptions.size());
-        return activeSubscriptions.get(randomIndex).getSubscriptionId();
-    }
-
-    private List<SubscriptionInfo> getActiveSubscriptions() {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.LOLLIPOP_MR1) {
-            return new ArrayList<>();
-        }
-
-        if (getApplicationContext().checkSelfPermission(Manifest.permission.READ_PHONE_STATE)
-            != PackageManager.PERMISSION_GRANTED) {
-            return new ArrayList<>();
-        }
-
-        try {
-            SubscriptionManager manager = getApplicationContext().getSystemService(SubscriptionManager.class);
-            if (manager == null) {
-                return new ArrayList<>();
-            }
-
-            List<SubscriptionInfo> active = manager.getActiveSubscriptionInfoList();
-            return active != null ? active : new ArrayList<>();
-        } catch (Exception exception) {
-            Log.w(TAG, "failed to get active subscriptions", exception);
-            return new ArrayList<>();
-        }
-    }
-
-    private Integer resolveManualSubscriptionId(String simSlotId, List<SubscriptionInfo> activeSubscriptions) {
-        if (simSlotId == null) {
-            return null;
-        }
-
-        Integer parsedNumber = parseInteger(simSlotId);
-        if (parsedNumber != null) {
-            for (SubscriptionInfo info : activeSubscriptions) {
-                if (info.getSubscriptionId() == parsedNumber || info.getSimSlotIndex() == parsedNumber) {
-                    return info.getSubscriptionId();
-                }
-            }
-        }
-
-        if (simSlotId.startsWith("slot-") || simSlotId.startsWith("sim-")) {
-            Integer slotIndex = parseInteger(simSlotId.replace("slot-", "").replace("sim-", ""));
-            if (slotIndex != null) {
-                for (SubscriptionInfo info : activeSubscriptions) {
-                    if (info.getSimSlotIndex() == slotIndex) {
-                        return info.getSubscriptionId();
-                    }
-                }
-            }
-        }
-
-        return null;
-    }
-
-    private SendConfigSnapshot readSendConfig() {
-        SharedPreferences storage = getApplicationContext().getSharedPreferences(CAPACITOR_STORAGE, Context.MODE_PRIVATE);
-        String rawConfig = storage.getString(SEND_CONFIG_KEY, null);
-        if (rawConfig == null) {
-            return new SendConfigSnapshot("random", null);
-        }
-
-        try {
-            JSONObject config = new JSONObject(rawConfig);
-            String simMode = trim(config.optString("simMode", null));
-            String simSlotId = trim(config.optString("simSlotId", null));
-            return new SendConfigSnapshot(simMode, simSlotId);
-        } catch (Exception exception) {
-            Log.w(TAG, "failed to parse send config, fallback random", exception);
-            return new SendConfigSnapshot("random", null);
-        }
+        return sent;
     }
 
     private boolean matchesTargetStatus(RuntimeStatus current, String targetStatus) {
@@ -480,7 +318,7 @@ public class SmsWakeWorker extends Worker {
             }
 
             ensureBatchNotificationChannel();
-            String locale = getCurrentLocale();
+            String locale = AppStorageHelper.readLocale(getApplicationContext());
 
             String title = resolveLocalizedTitle(locale, error == null);
             String body = resolveLocalizedBody(locale, processedCount, error == null);
@@ -500,20 +338,6 @@ public class SmsWakeWorker extends Worker {
         } catch (Exception exception) {
             Log.w(TAG, "failed to show batch result notification", exception);
         }
-    }
-
-    private String getCurrentLocale() {
-        SharedPreferences storage = getApplicationContext().getSharedPreferences(CAPACITOR_STORAGE, Context.MODE_PRIVATE);
-        String raw = trim(storage.getString(LOCALE_KEY, null));
-        if (raw == null) {
-            return "en";
-        }
-
-        String lowered = raw.toLowerCase();
-        if ("ko".equals(lowered)) {
-            return "ko";
-        }
-        return "en";
     }
 
     private String resolveLocalizedTitle(String locale, boolean success) {
@@ -574,9 +398,14 @@ public class SmsWakeWorker extends Worker {
         notificationManager.createNotificationChannel(channel);
     }
 
-    private RuntimeStatus readCurrentStatus(SessionConfig session, int scheduleId) {
+    private RuntimeStatus readCurrentStatus(AppStorageHelper.SessionConfig session, int scheduleId) {
         try {
-            JSONObject detail = executeRequest("GET", session.baseUrl + "/sms-schedules/" + scheduleId, session.token, null);
+            JSONObject detail = HttpJsonHelper.requestJson(
+                "GET",
+                session.baseUrl + "/sms-schedules/" + scheduleId,
+                session.token,
+                null
+            );
             Object status = detail.opt("status");
 
             Object directData = detail.opt("data");
@@ -666,7 +495,7 @@ public class SmsWakeWorker extends Worker {
             return RuntimeStatus.UNKNOWN;
         }
 
-        String normalized = trim(value == null ? null : String.valueOf(value));
+        String normalized = AppStorageHelper.trimToNull(value == null ? null : String.valueOf(value));
         if (normalized == null) {
             return RuntimeStatus.UNKNOWN;
         }
@@ -725,7 +554,7 @@ public class SmsWakeWorker extends Worker {
         }
 
         if (value instanceof String) {
-            return trim((String) value);
+            return AppStorageHelper.trimToNull((String) value);
         }
 
         return null;
@@ -733,7 +562,7 @@ public class SmsWakeWorker extends Worker {
 
     private String firstNonBlank(String... values) {
         for (String value : values) {
-            String normalized = trim(value);
+            String normalized = AppStorageHelper.trimToNull(value);
             if (normalized != null) {
                 return normalized;
             }
@@ -742,7 +571,7 @@ public class SmsWakeWorker extends Worker {
     }
 
     private Integer parseInteger(String raw) {
-        String normalized = trim(raw);
+        String normalized = AppStorageHelper.trimToNull(raw);
         if (normalized == null) {
             return null;
         }
@@ -754,80 +583,4 @@ public class SmsWakeWorker extends Worker {
         }
     }
 
-    private JSONObject executeRequest(String method, String url, String token, JSONObject body) throws Exception {
-        HttpURLConnection connection = null;
-
-        try {
-            connection = (HttpURLConnection) new URL(url).openConnection();
-            connection.setRequestMethod(method);
-            connection.setConnectTimeout(12_000);
-            connection.setReadTimeout(12_000);
-            connection.setRequestProperty("Accept", "application/json");
-            connection.setRequestProperty("Authorization", "Bearer " + token);
-
-            if (body != null) {
-                connection.setDoOutput(true);
-                connection.setRequestProperty("Content-Type", "application/json");
-
-                byte[] bytes = body.toString().getBytes(StandardCharsets.UTF_8);
-                try (DataOutputStream outputStream = new DataOutputStream(connection.getOutputStream())) {
-                    outputStream.write(bytes);
-                    outputStream.flush();
-                }
-            }
-
-            int status = connection.getResponseCode();
-            String responseBody = readResponseBody(
-                status >= 200 && status < 300 ? connection.getInputStream() : connection.getErrorStream()
-            );
-
-            if (status < 200 || status >= 300) {
-                throw new IllegalStateException("HTTP " + status + " " + method + " " + url + " body=" + responseBody);
-            }
-
-            if (responseBody == null || responseBody.trim().isEmpty()) {
-                return new JSONObject();
-            }
-
-            return new JSONObject(responseBody);
-        } finally {
-            if (connection != null) {
-                connection.disconnect();
-            }
-        }
-    }
-
-    private String readResponseBody(InputStream inputStream) throws Exception {
-        if (inputStream == null) {
-            return "";
-        }
-
-        StringBuilder builder = new StringBuilder();
-        try (BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream, StandardCharsets.UTF_8))) {
-            String line;
-            while ((line = reader.readLine()) != null) {
-                builder.append(line);
-            }
-        }
-        return builder.toString();
-    }
-
-    private String trim(String value) {
-        if (value == null) {
-            return null;
-        }
-
-        String normalized = value.trim();
-        return normalized.isEmpty() ? null : normalized;
-    }
-
-    private static class SessionConfig {
-        final String baseUrl;
-        final String token;
-
-        SessionConfig(String baseUrl, String token) {
-            this.baseUrl = baseUrl.endsWith("/") ? baseUrl.substring(0, baseUrl.length() - 1) : baseUrl;
-            this.token = token;
-        }
-    }
 }

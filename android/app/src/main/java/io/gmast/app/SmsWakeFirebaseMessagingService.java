@@ -1,8 +1,6 @@
 package io.gmast.app;
 
 import android.util.Log;
-import android.content.Context;
-import android.content.SharedPreferences;
 
 import androidx.annotation.NonNull;
 import androidx.work.Data;
@@ -15,19 +13,11 @@ import com.google.firebase.messaging.RemoteMessage;
 
 import org.json.JSONObject;
 
-import java.io.DataOutputStream;
-import java.net.HttpURLConnection;
-import java.net.URL;
-import java.nio.charset.StandardCharsets;
 import java.util.Map;
 
 public class SmsWakeFirebaseMessagingService extends FirebaseMessagingService {
     private static final String TAG = "SMS_WAKE_FCM";
     private static final String UNIQUE_WORK_NAME = "sms_queue_wake_work";
-    private static final String CAPACITOR_STORAGE = "CapacitorStorage";
-    private static final String AUTH_SESSION_KEY = "gmast::auth-session";
-    private static final String API_BASE_URL_KEY = "gmast::api-base-url";
-    private static final String LAST_FCM_TOKEN_KEY = "gmast::last-fcm-token-native";
 
     @Override
     public void onNewToken(@NonNull String token) {
@@ -35,7 +25,7 @@ public class SmsWakeFirebaseMessagingService extends FirebaseMessagingService {
         Log.w(TAG, "onNewToken length=" + token.length());
 
         try {
-            persistLatestToken(token);
+            AppStorageHelper.saveLastFcmToken(getApplicationContext(), token);
             boolean synced = syncTokenToBackend(token);
             Log.w(TAG, "onNewToken sync result=" + synced);
         } catch (Exception exception) {
@@ -113,96 +103,23 @@ public class SmsWakeFirebaseMessagingService extends FirebaseMessagingService {
         return value == null ? "" : value;
     }
 
-    private void persistLatestToken(String token) {
-        SharedPreferences storage = getApplicationContext().getSharedPreferences(CAPACITOR_STORAGE, Context.MODE_PRIVATE);
-        storage.edit().putString(LAST_FCM_TOKEN_KEY, token).apply();
-    }
-
     private boolean syncTokenToBackend(String token) {
-        SessionConfig session = readSessionConfig();
+        AppStorageHelper.SessionConfig session = AppStorageHelper.readSessionConfig(getApplicationContext(), TAG);
         if (session == null) {
             Log.w(TAG, "skip token sync: missing auth session or api base");
             return false;
         }
 
-        HttpURLConnection connection = null;
         try {
-            URL endpoint = new URL(session.baseUrl + "/save-fcm-token");
-            connection = (HttpURLConnection) endpoint.openConnection();
-            connection.setRequestMethod("POST");
-            connection.setConnectTimeout(12_000);
-            connection.setReadTimeout(12_000);
-            connection.setDoOutput(true);
-            connection.setRequestProperty("Accept", "application/json");
-            connection.setRequestProperty("Authorization", "Bearer " + session.token);
-            connection.setRequestProperty("Content-Type", "application/json");
-
             JSONObject payload = new JSONObject();
             payload.put("token", token);
             payload.put("platform", "android");
 
-            byte[] bytes = payload.toString().getBytes(StandardCharsets.UTF_8);
-            try (DataOutputStream stream = new DataOutputStream(connection.getOutputStream())) {
-                stream.write(bytes);
-                stream.flush();
-            }
-
-            int status = connection.getResponseCode();
-            if (status >= 200 && status < 300) {
-                return true;
-            }
-
-            Log.w(TAG, "save-fcm-token failed status=" + status);
-            return false;
+            HttpJsonHelper.requestJson("POST", session.baseUrl + "/save-fcm-token", session.token, payload);
+            return true;
         } catch (Exception exception) {
             Log.w(TAG, "save-fcm-token request failed", exception);
             return false;
-        } finally {
-            if (connection != null) {
-                connection.disconnect();
-            }
-        }
-    }
-
-    private SessionConfig readSessionConfig() {
-        SharedPreferences storage = getApplicationContext().getSharedPreferences(CAPACITOR_STORAGE, Context.MODE_PRIVATE);
-        String apiBaseUrl = trim(storage.getString(API_BASE_URL_KEY, null));
-        String rawSession = storage.getString(AUTH_SESSION_KEY, null);
-
-        if (apiBaseUrl == null || rawSession == null) {
-            return null;
-        }
-
-        try {
-            JSONObject session = new JSONObject(rawSession);
-            String token = trim(session.optString("token", null));
-            if (token == null) {
-                return null;
-            }
-
-            return new SessionConfig(apiBaseUrl, token);
-        } catch (Exception exception) {
-            Log.w(TAG, "failed to parse auth session for token sync", exception);
-            return null;
-        }
-    }
-
-    private String trim(String value) {
-        if (value == null) {
-            return null;
-        }
-
-        String normalized = value.trim();
-        return normalized.isEmpty() ? null : normalized;
-    }
-
-    private static class SessionConfig {
-        final String baseUrl;
-        final String token;
-
-        SessionConfig(String baseUrl, String token) {
-            this.baseUrl = baseUrl.endsWith("/") ? baseUrl.substring(0, baseUrl.length() - 1) : baseUrl;
-            this.token = token;
         }
     }
 }
