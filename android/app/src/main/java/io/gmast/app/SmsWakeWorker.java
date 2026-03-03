@@ -20,6 +20,7 @@ import org.json.JSONObject;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Iterator;
 import java.util.concurrent.ThreadLocalRandom;
 
 public class SmsWakeWorker extends Worker {
@@ -27,8 +28,11 @@ public class SmsWakeWorker extends Worker {
     private static final String PREF_NAME = "sms_wake_debug";
     private static final String PREF_LAST_PAYLOAD = "last_payload";
     private static final String PREF_LAST_TS = "last_timestamp";
-    private static final long MIN_SMS_INTERVAL_MS = 3_000L;
-    private static final long MAX_SMS_INTERVAL_MS = 5_000L;
+    private static final String PREF_RATE_LOG = "sms_rate_timestamps";
+    private static final long RATE_WINDOW_MS = 60_000L;
+    private static final int MAX_SMS_PER_MINUTE = 6;
+    private static final long MIN_SMS_INTERVAL_MS = 9_000L;
+    private static final long MAX_SMS_INTERVAL_MS = 11_000L;
     private static final String BATCH_NOTIFICATION_CHANNEL_ID = "sms_batch_result_channel";
 
     private enum RuntimeStatus {
@@ -121,9 +125,7 @@ public class SmsWakeWorker extends Worker {
         for (int index = 0; index < sendableTasks.size(); index += 1) {
             PendingSmsTask task = sendableTasks.get(index);
 
-            if (index > 0) {
-                sleepBetweenSms();
-            }
+            enforceRateLimitBeforeSend();
 
             if (processSingleSchedule(session, task, sendConfig)) {
                 processed += 1;
@@ -208,17 +210,56 @@ public class SmsWakeWorker extends Worker {
         PendingSmsTask task,
         AppStorageHelper.SendConfigSnapshot sendConfig
     ) {
+        RuntimeStatus beforeClaim = readCurrentStatus(session, task.scheduleId);
+        if (beforeClaim == RuntimeStatus.SENT) {
+            Log.w(TAG, "schedule " + task.scheduleId + " already sent by another processor, skip");
+            return false;
+        }
+
+        if (beforeClaim == RuntimeStatus.PROCESSING) {
+            Log.w(TAG, "schedule " + task.scheduleId + " already processing on another device, skip");
+            return false;
+        }
+
         boolean movedToProcessing = transitionScheduleStatus(session, task.scheduleId, "processing", false);
         if (!movedToProcessing) {
             Log.w(TAG, "schedule " + task.scheduleId + " could not move to processing");
-            transitionScheduleStatus(session, task.scheduleId, "failed", true);
+            RuntimeStatus latest = readCurrentStatus(session, task.scheduleId);
+            if (latest == RuntimeStatus.SENT || latest == RuntimeStatus.PROCESSING) {
+                Log.w(TAG, "schedule " + task.scheduleId + " moved by another processor to " + latest + ", skip");
+                return false;
+            }
+            return false;
+        }
+
+        RuntimeStatus beforeSend = readCurrentStatus(session, task.scheduleId);
+        if (beforeSend != RuntimeStatus.PROCESSING) {
+            Log.w(TAG, "schedule " + task.scheduleId + " no longer processing before send, current=" + beforeSend);
             return false;
         }
 
         boolean smsSent = sendSmsUsingConfig(task, sendConfig);
 
         if (smsSent) {
-            return transitionScheduleStatus(session, task.scheduleId, "sent", false);
+            boolean movedToSent = transitionScheduleStatus(session, task.scheduleId, "sent", false);
+            if (movedToSent) {
+                return true;
+            }
+
+            RuntimeStatus latest = readCurrentStatus(session, task.scheduleId);
+            if (latest == RuntimeStatus.SENT) {
+                Log.w(TAG, "schedule " + task.scheduleId + " already marked sent by another processor");
+                return true;
+            }
+
+            Log.w(TAG, "schedule " + task.scheduleId + " sent locally but failed to mark sent, current=" + latest);
+            return false;
+        }
+
+        RuntimeStatus beforeFail = readCurrentStatus(session, task.scheduleId);
+        if (beforeFail == RuntimeStatus.SENT) {
+            Log.w(TAG, "schedule " + task.scheduleId + " already sent by another processor while local send failed");
+            return true;
         }
 
         transitionScheduleStatus(session, task.scheduleId, "failed", true);
@@ -273,6 +314,8 @@ public class SmsWakeWorker extends Worker {
             TAG
         );
 
+        recordSendAttemptTimestamp();
+
         if (sent) {
             Log.w(TAG, "sms sent schedule=" + task.scheduleId + " receiver=" + task.receiver);
         } else {
@@ -280,6 +323,99 @@ public class SmsWakeWorker extends Worker {
         }
 
         return sent;
+    }
+
+    private void enforceRateLimitBeforeSend() {
+        while (true) {
+            long now = System.currentTimeMillis();
+            List<Long> recentTimestamps = readRecentSendTimestamps(now);
+
+            long waitForWindowMs = 0L;
+            if (recentTimestamps.size() >= MAX_SMS_PER_MINUTE) {
+                long oldestInWindow = recentTimestamps.get(0);
+                waitForWindowMs = Math.max(0L, (oldestInWindow + RATE_WINDOW_MS) - now);
+            }
+
+            long waitForGapMs = 0L;
+            if (!recentTimestamps.isEmpty()) {
+                long lastSentAt = recentTimestamps.get(recentTimestamps.size() - 1);
+                long elapsedSinceLast = now - lastSentAt;
+                long targetGap = ThreadLocalRandom.current().nextLong(MIN_SMS_INTERVAL_MS, MAX_SMS_INTERVAL_MS + 1);
+                waitForGapMs = Math.max(0L, targetGap - elapsedSinceLast);
+            }
+
+            long waitMs = Math.max(waitForWindowMs, waitForGapMs);
+            if (waitMs <= 0L) {
+                return;
+            }
+
+            Log.w(TAG, "rate limit active, waiting " + waitMs + "ms before next SMS");
+
+            try {
+                Thread.sleep(waitMs);
+            } catch (InterruptedException interruptedException) {
+                Thread.currentThread().interrupt();
+                Log.w(TAG, "rate limit wait interrupted", interruptedException);
+                return;
+            }
+        }
+    }
+
+    private void recordSendAttemptTimestamp() {
+        long now = System.currentTimeMillis();
+        List<Long> timestamps = readRecentSendTimestamps(now);
+        timestamps.add(now);
+        saveSendTimestamps(timestamps);
+    }
+
+    private List<Long> readRecentSendTimestamps(long now) {
+        android.content.SharedPreferences preferences = getApplicationContext().getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE);
+        String raw = AppStorageHelper.trimToNull(preferences.getString(PREF_RATE_LOG, null));
+
+        List<Long> timestamps = new ArrayList<>();
+        if (raw != null) {
+            String[] parts = raw.split(",");
+            for (String part : parts) {
+                String normalized = AppStorageHelper.trimToNull(part);
+                if (normalized == null) {
+                    continue;
+                }
+
+                try {
+                    long value = Long.parseLong(normalized);
+                    if (value > 0L) {
+                        timestamps.add(value);
+                    }
+                } catch (Exception ignored) {
+                    // ignore malformed timestamp entry
+                }
+            }
+        }
+
+        long windowStart = now - RATE_WINDOW_MS;
+        Iterator<Long> iterator = timestamps.iterator();
+        while (iterator.hasNext()) {
+            Long value = iterator.next();
+            if (value == null || value < windowStart) {
+                iterator.remove();
+            }
+        }
+
+        saveSendTimestamps(timestamps);
+        return timestamps;
+    }
+
+    private void saveSendTimestamps(List<Long> timestamps) {
+        StringBuilder builder = new StringBuilder();
+        for (int i = 0; i < timestamps.size(); i += 1) {
+            if (i > 0) {
+                builder.append(',');
+            }
+            builder.append(timestamps.get(i));
+        }
+
+        android.content.SharedPreferences preferences = getApplicationContext().getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE);
+        preferences.edit().putString(PREF_RATE_LOG, builder.toString()).apply();
     }
 
     private boolean matchesTargetStatus(RuntimeStatus current, String targetStatus) {
@@ -296,18 +432,6 @@ public class SmsWakeWorker extends Worker {
             return current == RuntimeStatus.PENDING;
         }
         return false;
-    }
-
-    private void sleepBetweenSms() {
-        long delayMs = ThreadLocalRandom.current().nextLong(MIN_SMS_INTERVAL_MS, MAX_SMS_INTERVAL_MS + 1);
-        Log.w(TAG, "throttling next SMS by " + delayMs + "ms");
-
-        try {
-            Thread.sleep(delayMs);
-        } catch (InterruptedException interruptedException) {
-            Thread.currentThread().interrupt();
-            Log.w(TAG, "sleepBetweenSms interrupted", interruptedException);
-        }
     }
 
     private void showBatchResultNotification(int processedCount, Exception error) {
