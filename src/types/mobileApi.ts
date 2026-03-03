@@ -47,6 +47,18 @@ export interface SmsScheduleStatusUpdateResponse {
   data: Record<string, unknown>;
 }
 
+export interface SmsScheduleStatistics {
+  pending: number;
+  processing: number;
+  sent: number;
+  failed: number;
+}
+
+export interface SmsScheduleStatisticsResponse {
+  data: SmsScheduleStatistics;
+  raw: Record<string, unknown>;
+}
+
 export interface SaveFcmTokenRequest {
   token: string;
   platform?: string;

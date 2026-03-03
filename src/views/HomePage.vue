@@ -36,24 +36,7 @@
           </div>
         </section>
 
-        <section class="kpi-grid">
-          <article class="kpi-card dashboard-panel-card">
-            <p>{{ t('home.kpi.pending.label') }}</p>
-            <strong>{{ pendingCount }}</strong>
-          </article>
-          <article class="kpi-card dashboard-panel-card">
-            <p>{{ t('home.kpi.processing.label') }}</p>
-            <strong>{{ processingCount }}</strong>
-          </article>
-          <article class="kpi-card dashboard-panel-card">
-            <p>{{ t('home.kpi.failed.label') }}</p>
-            <strong>{{ failedCount }}</strong>
-          </article>
-          <article class="kpi-card dashboard-panel-card">
-            <p>{{ t('home.totalItems') }}</p>
-            <strong>{{ totalItems }}</strong>
-          </article>
-        </section>
+        <kpi-grid :stats="kpiStats" />
 
         <section class="queue-card dashboard-panel-card">
           <div class="queue-toolbar">
@@ -160,8 +143,11 @@ import type {
 import { cloudOfflineOutline, refreshOutline, warningOutline } from 'ionicons/icons';
 import { onMounted, computed, ref, onBeforeUnmount } from 'vue';
 import { useI18n } from 'vue-i18n';
+import KpiGrid from '@/components/KpiGrid.vue';
 import { usePendingQueue } from '@/composables/usePendingQueue';
 import { useResultSync } from '@/composables/useResultSync';
+import { getSmsScheduleStatistics } from '@/services/mobile';
+import type { SmsScheduleStatistics } from '@/types/mobileApi';
 import type { QueueMessage, QueueMessageStatus } from '@/types/queue';
 
 const { t } = useI18n();
@@ -204,6 +190,12 @@ const resultToastMessage = computed(() => {
 });
 
 const activeSegment = ref('all');
+const kpiStats = ref<SmsScheduleStatistics>({
+  pending: 0,
+  processing: 0,
+  sent: 0,
+  failed: 0
+});
 
 type SegmentFilter = (message: QueueMessage) => boolean;
 interface SegmentDefinition {
@@ -230,11 +222,6 @@ const segmentDefinitions: SegmentDefinition[] = [
     filter: (message) => message.status === 'failed'
   }
 ];
-
-const totalItems = computed(() => meta.value?.totalItems ?? messages.value.length);
-const pendingCount = computed(() => messages.value.filter((item: QueueMessage) => item.status === 'pending').length);
-const processingCount = computed(() => messages.value.filter((item: QueueMessage) => item.status === 'processing').length);
-const failedCount = computed(() => messages.value.filter((item: QueueMessage) => item.status === 'failed').length);
 
 const queueTabs = computed(() =>
   segmentDefinitions.map((segment) => ({
@@ -291,11 +278,12 @@ const handleFilterChange = (event: CustomEvent<SelectChangeEventDetail>) => {
 
 const handleRefresh = async (event: RefresherCustomEvent) => {
   await refreshQueue(true);
+  await refreshKpiStats();
   event.target.complete();
 };
 
 const handleManualRefresh = async () => {
-  await refreshQueue(true);
+  await Promise.all([refreshQueue(true), refreshKpiStats()]);
 };
 
 const handleInfinite = async (event: InfiniteScrollCustomEvent) => {
@@ -337,6 +325,15 @@ const handleRetryResultSync = async () => {
   await retryFailedResults();
 };
 
+const refreshKpiStats = async () => {
+  try {
+    const { data } = await getSmsScheduleStatistics();
+    kpiStats.value = data;
+  } catch (error) {
+    console.warn('[HomePage] failed to fetch KPI statistics', error);
+  }
+};
+
 const handleToastDismiss = () => {
   dismissToast();
 };
@@ -360,6 +357,7 @@ const resultToastButtons = [
 
 onMounted(() => {
   void loadQueue({ force: true });
+  void refreshKpiStats();
   hydrateFailures();
   stopAutoRefresh = startAutoRefresh();
 });
@@ -413,28 +411,6 @@ ion-content {
   gap: 0.6rem;
   align-items: center;
   flex-wrap: wrap;
-}
-
-.kpi-grid {
-  display: grid;
-  gap: 0.75rem;
-  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-}
-
-.kpi-card {
-    padding: .75rem;
-}
-
-.kpi-card p {
-  margin: 0;
-  color: var(--dashboard-text-secondary);
-  font-size: 0.85rem;
-}
-
-.kpi-card strong {
-  display: block;
-  margin-top: 0.3rem;
-  font-size: 1.4rem;
 }
 
 .queue-toolbar {

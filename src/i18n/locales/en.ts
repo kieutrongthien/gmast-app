@@ -52,6 +52,11 @@ const en = {
         support: 'Validate before send cycle',
         trend: '{count} high priority'
       },
+      sent: {
+        label: 'Sent',
+        support: 'Successfully delivered',
+        trend: '{count} sent'
+      },
       failed: {
         label: 'Failed',
         support: 'Tap retry to synchronize',

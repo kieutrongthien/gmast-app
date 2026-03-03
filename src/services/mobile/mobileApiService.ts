@@ -14,6 +14,8 @@ import type {
   SmsScheduleListRequest,
   SmsScheduleListResponse,
   SmsScheduleRecord,
+  SmsScheduleStatistics,
+  SmsScheduleStatisticsResponse,
   SmsScheduleStatusUpdateRequest,
   SmsScheduleStatusUpdateResponse
 } from '@/types/mobileApi';
@@ -22,6 +24,7 @@ const LOGIN_ENDPOINT = '/auth/login';
 const USER_INFO_ENDPOINT = '/user';
 const SAVE_FCM_TOKEN_ENDPOINT = '/save-fcm-token';
 const SMS_SCHEDULES_ENDPOINT = '/sms-schedules';
+const SMS_SCHEDULES_STATISTICS_ENDPOINT = '/sms-schedules/statistics';
 
 const asRecord = (value: unknown): Record<string, unknown> =>
   value && typeof value === 'object' && !Array.isArray(value) ? (value as Record<string, unknown>) : {};
@@ -165,6 +168,32 @@ const extractDetail = (payload: Record<string, unknown>, id: string): SmsSchedul
   throw new Error(`SMS schedule detail for id ${id} is empty`);
 };
 
+const readStatNumber = (record: Record<string, unknown>, key: string): number => {
+  const value = record[key];
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return value;
+  }
+  if (typeof value === 'string') {
+    const parsed = Number(value);
+    if (Number.isFinite(parsed)) {
+      return parsed;
+    }
+  }
+  return 0;
+};
+
+const extractStatistics = (payload: Record<string, unknown>): SmsScheduleStatistics => {
+  const nested = asRecord(payload.data);
+  const source = Object.keys(nested).length > 0 ? nested : payload;
+
+  return {
+    pending: readStatNumber(source, 'pending'),
+    processing: readStatNumber(source, 'processing'),
+    sent: readStatNumber(source, 'sent'),
+    failed: readStatNumber(source, 'failed')
+  };
+};
+
 export const loginMobile = async (
   request: MobileLoginRequest,
   options: { persistAsActiveSession?: boolean } = {}
@@ -224,6 +253,17 @@ export const getSmsSchedules = async (
 
   return {
     items: extractList(raw),
+    raw
+  };
+};
+
+export const getSmsScheduleStatistics = async (token?: string): Promise<SmsScheduleStatisticsResponse> => {
+  const headers = await resolveAuthHeaders(token);
+  const { data } = await httpClient.get<Record<string, unknown>>(SMS_SCHEDULES_STATISTICS_ENDPOINT, { headers });
+  const raw = asRecord(data);
+
+  return {
+    data: extractStatistics(raw),
     raw
   };
 };

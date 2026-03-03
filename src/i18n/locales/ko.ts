@@ -52,6 +52,11 @@ const ko = {
         support: '발송 전 검증',
         trend: '높은 우선순위 {count}건'
       },
+      sent: {
+        label: '전송 완료',
+        support: '성공적으로 전송됨',
+        trend: '전송 {count}건'
+      },
       failed: {
         label: '해결 필요',
         support: '재시도로 동기화',
