@@ -41,6 +41,7 @@
         <section class="queue-card dashboard-panel-card">
           <div class="queue-toolbar">
             <ion-select
+              :key="selectRenderKey"
               :value="activeSegment"
               class="queue-filter-select"
               interface="popover"
@@ -48,7 +49,7 @@
               label-placement="stacked"
               @ionChange="handleFilterChange"
             >
-              <ion-select-option v-for="tab in queueTabs" :key="tab.id" :value="tab.id">
+              <ion-select-option v-for="tab in queueTabs" :key="`${tab.id}-${tab.count}`" :value="tab.id">
                 {{ t(tab.labelKey) }} ({{ tab.count }})
               </ion-select-option>
             </ion-select>
@@ -228,6 +229,10 @@ const queueTabs = computed(() =>
     ...segment,
     count: messages.value.filter(segment.filter).length
   }))
+);
+
+const selectRenderKey = computed(() =>
+  queueTabs.value.map((tab) => `${tab.id}:${tab.count}`).join('|')
 );
 
 const filteredMessages = computed(() => {
