@@ -11,7 +11,7 @@
       </ion-toolbar>
     </ion-header>
 
-    <ion-content :fullscreen="true">
+    <ion-content :fullscreen="true" :scroll-events="true" @ionScroll="handleContentScroll">
       <ion-refresher slot="fixed" @ionRefresh="handleRefresh">
         <ion-refresher-content
           :pulling-text="t('home.refresherPulling')"
@@ -28,10 +28,6 @@
             <p class="hero-subtitle">{{ t('home.heroSubtitle') }}</p>
           </div>
           <div class="hero-actions">
-            <ion-button color="primary" :disabled="loading" @click="handleManualRefresh">
-              <ion-icon :icon="refreshOutline" slot="start" />
-              {{ t('home.scanQueue') }}
-            </ion-button>
             <ion-chip color="medium" v-if="usingMock">{{ t('home.mockData') }}</ion-chip>
             <ion-chip color="danger" v-if="error">
               <ion-icon :icon="warningOutline" />
@@ -158,6 +154,7 @@ import {
 import type {
   InfiniteScrollCustomEvent,
   RefresherCustomEvent,
+  ScrollCustomEvent,
   SelectChangeEventDetail
 } from '@ionic/core';
 import { cloudOfflineOutline, refreshOutline, warningOutline } from 'ionicons/icons';
@@ -234,7 +231,7 @@ const segmentDefinitions: SegmentDefinition[] = [
   }
 ];
 
-const totalItems = computed(() => messages.value.length);
+const totalItems = computed(() => meta.value?.totalItems ?? messages.value.length);
 const pendingCount = computed(() => messages.value.filter((item: QueueMessage) => item.status === 'pending').length);
 const processingCount = computed(() => messages.value.filter((item: QueueMessage) => item.status === 'processing').length);
 const failedCount = computed(() => messages.value.filter((item: QueueMessage) => item.status === 'failed').length);
@@ -304,6 +301,36 @@ const handleManualRefresh = async () => {
 const handleInfinite = async (event: InfiniteScrollCustomEvent) => {
   await loadNextPage();
   event.target.complete();
+};
+
+let lastScrollLoadAt = 0;
+const handleContentScroll = async (event: ScrollCustomEvent) => {
+  if (!hasMore.value || loading.value || loadingMore.value) {
+    return;
+  }
+
+  const contentEl = event.target as HTMLIonContentElement | null;
+  if (!contentEl?.getScrollElement) {
+    return;
+  }
+
+  const scrollElement = await contentEl.getScrollElement();
+  const scrollTop = event.detail.scrollTop;
+  const scrollHeight = scrollElement.scrollHeight;
+  const viewportHeight = scrollElement.clientHeight;
+  const distanceToBottom = scrollHeight - (scrollTop + viewportHeight);
+
+  if (distanceToBottom > 180) {
+    return;
+  }
+
+  const now = Date.now();
+  if (now - lastScrollLoadAt < 800) {
+    return;
+  }
+
+  lastScrollLoadAt = now;
+  await loadNextPage();
 };
 
 const handleRetryResultSync = async () => {

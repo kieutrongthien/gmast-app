@@ -220,12 +220,13 @@ const deriveMetaFromPayload = (
     ...directMeta
   };
 
-  const metaPage = readPositiveInteger(metaSource, 'page', 'current_page', 'currentPage') ?? page;
+  const metaPage = readPositiveInteger(metaSource, 'current_page', 'page', 'currentPage') ?? page;
   const metaPageSize =
-    readPositiveInteger(metaSource, 'per_page', 'pageSize', 'perPage', 'limit') ?? pageSize;
+    readPositiveInteger(metaSource, 'per_page', 'count', 'pageSize', 'perPage', 'limit') ?? pageSize;
   const metaTotalItems = readPositiveInteger(metaSource, 'total', 'totalItems', 'count') ?? currentCount;
+  const metaLastPage = readPositiveInteger(metaSource, 'last_page', 'lastPage', 'totalPages', 'total_pages', 'total_page');
   const totalPages =
-    readPositiveInteger(metaSource, 'totalPages', 'total_pages', 'total_page', 'last_page', 'lastPage')
+    metaLastPage
     ?? Math.max(1, Math.ceil(metaTotalItems / Math.max(1, metaPageSize)));
 
   const hasNextExplicit = Object.prototype.hasOwnProperty.call(metaSource, 'hasNext')
@@ -236,7 +237,13 @@ const deriveMetaFromPayload = (
         ? Boolean(metaSource.next_page_url)
         : null));
 
-  const hasNextPage = hasNextExplicit === null ? metaPage < totalPages : hasNextExplicit;
+  const hasNextByPage = metaLastPage != null
+    ? metaPage < metaLastPage
+    : metaPage < totalPages;
+  const hasNextPage = hasNextExplicit == null
+    ? hasNextByPage
+    : (hasNextExplicit || hasNextByPage);
+
   return buildMeta(metaTotalItems, metaPage, metaPageSize, totalPages, hasNextPage);
 };
 

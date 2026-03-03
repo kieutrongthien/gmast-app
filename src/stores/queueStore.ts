@@ -50,7 +50,7 @@ const assignSnapshot = (next: QueueSnapshot, mock = false) => {
   state.lastUpdated = next.updatedAt;
   state.usingMock = mock;
   state.currentPage = next.meta.page;
-  state.hasMore = next.meta.hasNextPage;
+  state.hasMore = next.meta.hasNextPage || next.meta.page < next.meta.totalPages;
 };
 
 const loadQueue = async (options: LoadOptions = {}): Promise<QueueSnapshot | null> => {
@@ -104,12 +104,14 @@ const loadNextPage = async (): Promise<QueueSnapshot | null> => {
 
   try {
     const next = await fetchPendingMessages({ page: targetPage, pageSize, persist: false });
+    const hasMore = next.meta.hasNextPage || targetPage < next.meta.totalPages;
     const merged: QueueSnapshot = {
       messages: [...state.snapshot.messages, ...next.messages],
       meta: {
         ...next.meta,
         page: targetPage,
-        totalItems: next.meta.totalItems || state.snapshot.messages.length + next.messages.length
+        totalItems: next.meta.totalItems || state.snapshot.messages.length + next.messages.length,
+        hasNextPage: hasMore
       },
       updatedAt: next.updatedAt
     };
