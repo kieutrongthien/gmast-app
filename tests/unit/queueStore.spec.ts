@@ -7,7 +7,7 @@ const getCachedQueueMock = vi.fn();
 const buildMockSnapshot = vi.fn();
 
 vi.mock('@/services/messages/pendingMessageClient', () => ({
-  fetchFullPendingQueue: (...args: unknown[]) => fetchQueueMock(...args),
+  fetchPendingMessages: (...args: unknown[]) => fetchQueueMock(...args),
   getCachedPendingQueue: (...args: unknown[]) => getCachedQueueMock(...args)
 }));
 

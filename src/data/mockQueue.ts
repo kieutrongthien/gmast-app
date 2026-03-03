@@ -47,7 +47,7 @@ const buildMessage = (index: number): QueueMessage => {
 
 export const buildMockQueueSnapshot = (count = 120): QueueSnapshot => {
   const messages: QueueMessage[] = Array.from({ length: count }, (_value, index) => buildMessage(index + 1));
-  const pageSize = 50;
+  const pageSize = 20;
   const totalPages = Math.ceil(count / pageSize);
   const fetchedAt = new Date().toISOString();
 

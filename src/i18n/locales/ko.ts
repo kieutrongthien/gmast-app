@@ -20,6 +20,9 @@ const ko = {
     heroSubtitle:
       'KPI를 추적하고 SIM 우선순위를 조정하며 동기화 오류를 빠르게 대응해 고객 영향 전에 문제를 해결하세요.',
     scanQueue: '큐 스캔',
+    totalItems: '총 로드 수',
+    pageInfo: '{page}/{total} 페이지',
+    loadingMore: '메시지를 더 불러오는 중...',
     mockData: '모의 데이터',
     apiError: 'API 오류',
     panelEyebrow: '우선순위 큐',
@@ -163,6 +166,8 @@ const ko = {
     username: '아이디',
     email: '이메일',
     role: '권한',
+    smsWakeWorkerLabel: 'FCM 웨이크 처리 허용',
+    smsWakeWorkerHint: '끄면 수신된 FCM 웨이크 이벤트가 SmsWakeWorker를 시작하지 않습니다.',
     unknownUser: '알 수 없음',
     logout: '로그아웃'
   },

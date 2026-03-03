@@ -32,7 +32,7 @@ export const appConfig = {
     grantType: envSource.VITE_API_GRANT_TYPE ?? 'client_credentials'
   },
   queue: {
-    defaultPageSize: toNumber(envSource.VITE_QUEUE_PAGE_SIZE, 50),
+    defaultPageSize: toNumber(envSource.VITE_QUEUE_PAGE_SIZE, 20),
     maxPageSize: toNumber(envSource.VITE_QUEUE_MAX_PAGE_SIZE, 200),
     retry: {
       attempts: toNumber(envSource.VITE_QUEUE_RETRY_ATTEMPTS, 3),

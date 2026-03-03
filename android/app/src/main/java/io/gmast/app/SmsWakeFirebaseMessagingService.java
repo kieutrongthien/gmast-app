@@ -45,6 +45,11 @@ public class SmsWakeFirebaseMessagingService extends FirebaseMessagingService {
             return;
         }
 
+        if (!AppStorageHelper.isSmsWakeWorkerEnabled(getApplicationContext())) {
+            Log.w(TAG, "message ignored (SmsWakeWorker disabled by user setting)");
+            return;
+        }
+
         Data inputData = new Data.Builder()
             .putString("event", valueOrEmpty(data.get("event")))
             .putString("wakeSmsQueue", valueOrEmpty(data.get("wakeSmsQueue")))

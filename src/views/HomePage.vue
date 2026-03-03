@@ -20,75 +20,103 @@
         />
       </ion-refresher>
 
-      <section class="dashboard-hero">
-        <div class="hero-text">
-          <p class="hero-eyebrow">{{ t('home.heroEyebrow') }}</p>
-          <div class="hero-heading">
-            <h3>{{ t('home.heroTitle') }}</h3>
-            <ion-chip color="success" class="hero-chip">
-              <ion-icon :icon="cloudOfflineOutline" />
-              <ion-label>{{ t('home.heroPendingCount', { count: totalItems }) }}</ion-label>
+      <section class="home-shell">
+        <section class="home-hero dashboard-panel-card">
+          <div class="hero-copy">
+            <p class="hero-eyebrow">{{ t('home.heroEyebrow') }}</p>
+            <h2>{{ t('home.heroTitle') }}</h2>
+            <p class="hero-subtitle">{{ t('home.heroSubtitle') }}</p>
+          </div>
+          <div class="hero-actions">
+            <ion-button color="primary" :disabled="loading" @click="handleManualRefresh">
+              <ion-icon :icon="refreshOutline" slot="start" />
+              {{ t('home.scanQueue') }}
+            </ion-button>
+            <ion-chip color="medium" v-if="usingMock">{{ t('home.mockData') }}</ion-chip>
+            <ion-chip color="danger" v-if="error">
+              <ion-icon :icon="warningOutline" />
+              <ion-label>{{ t('home.apiError') }}</ion-label>
             </ion-chip>
           </div>
-          <p class="hero-subtitle">
-            {{ t('home.heroSubtitle') }}
-          </p>
-        </div>
-        <div class="hero-actions">
-          <ion-button color="primary" :disabled="loading" @click="handleManualRefresh">
-            <ion-icon :icon="refreshOutline" slot="start" />
-            {{ t('home.scanQueue') }}
-          </ion-button>
-          <ion-chip color="medium" v-if="usingMock">{{ t('home.mockData') }}</ion-chip>
-          <ion-chip color="danger" v-if="error">
-            <ion-icon :icon="warningOutline" />
-            <ion-label>{{ t('home.apiError') }}</ion-label>
-          </ion-chip>
-        </div>
-      </section>
+        </section>
 
-      <section class="panel primary-panel dashboard-panel-card">
-        <div class="panel-header">
-          <div>
-            <p class="panel-eyebrow">{{ t('home.panelEyebrow') }}</p>
-            <div class="panel-title-row">
-              <h3>{{ t('home.panelTitle') }}</h3>
-              <ion-select
-                :value="activeSegment"
-                class="queue-filter-select"
-                interface="popover"
-                :label="t('home.filterLabel')"
-                label-placement="stacked"
-                @ionChange="handleFilterChange"
-              >
-                <ion-select-option v-for="tab in queueTabs" :key="tab.id" :value="tab.id">
-                  {{ t(tab.labelKey) }} ({{ tab.count }})
-                </ion-select-option>
-              </ion-select>
+        <section class="kpi-grid">
+          <article class="kpi-card dashboard-panel-card">
+            <p>{{ t('home.kpi.pending.label') }}</p>
+            <strong>{{ pendingCount }}</strong>
+          </article>
+          <article class="kpi-card dashboard-panel-card">
+            <p>{{ t('home.kpi.processing.label') }}</p>
+            <strong>{{ processingCount }}</strong>
+          </article>
+          <article class="kpi-card dashboard-panel-card">
+            <p>{{ t('home.kpi.failed.label') }}</p>
+            <strong>{{ failedCount }}</strong>
+          </article>
+          <article class="kpi-card dashboard-panel-card">
+            <p>{{ t('home.totalItems') }}</p>
+            <strong>{{ totalItems }}</strong>
+          </article>
+        </section>
+
+        <section class="queue-card dashboard-panel-card">
+          <div class="queue-toolbar">
+            <ion-select
+              :value="activeSegment"
+              class="queue-filter-select"
+              interface="popover"
+              :label="t('home.filterLabel')"
+              label-placement="stacked"
+              @ionChange="handleFilterChange"
+            >
+              <ion-select-option v-for="tab in queueTabs" :key="tab.id" :value="tab.id">
+                {{ t(tab.labelKey) }} ({{ tab.count }})
+              </ion-select-option>
+            </ion-select>
+
+            <div class="queue-meta">
+              <ion-note>{{ t('home.updated', { value: lastUpdatedLabel }) }}</ion-note>
+              <ion-note>{{ t('home.pageInfo', { page: meta?.page ?? 1, total: meta?.totalPages ?? 1 }) }}</ion-note>
             </div>
           </div>
-          <div class="panel-updated">
-            <ion-icon :icon="alertCircleOutline" />
-            <span>{{ t('home.updated', { value: lastUpdatedLabel }) }}</span>
+
+          <div class="queue-notes" v-if="hasResultFailures">
+            <ion-chip color="danger" button @click="handleRetryResultSync">
+              <ion-icon :icon="cloudOfflineOutline" />
+              <ion-label>{{ t('home.syncErrorChip', { count: failedResultCount }) }}</ion-label>
+            </ion-chip>
           </div>
-        </div>
 
-        <div class="queue-notes" v-if="hasResultFailures">
-          <ion-chip color="danger" button @click="handleRetryResultSync">
-            <ion-icon :icon="cloudOfflineOutline" />
-            <ion-label>{{ t('home.syncErrorChip', { count: failedResultCount }) }}</ion-label>
-          </ion-chip>
-        </div>
+          <ion-list lines="full" class="queue-list">
+            <ion-item v-for="message in filteredMessages" :key="message.id" lines="full">
+              <ion-label class="queue-item-label">
+                <div class="queue-item-head">
+                  <strong>{{ message.receiver }}</strong>
+                  <ion-chip :color="statusColor(message.status)" size="small">{{ t(`queue.status.${message.status}`) }}</ion-chip>
+                </div>
+                <p>{{ message.message }}</p>
+                <ion-note>{{ message.updatedAt }}</ion-note>
+              </ion-label>
+            </ion-item>
+          </ion-list>
 
-        <queue-list
-          :items="filteredMessages"
-          class="queue-list-section"
-        />
-        <div class="status-loading" v-if="loading">
-          <ion-spinner name="crescent" />
-          <span>{{ t('home.syncing') }}</span>
-        </div>
+          <div class="status-loading" v-if="loading || loadingMore">
+            <ion-spinner name="crescent" />
+            <span>{{ t('home.syncing') }}</span>
+          </div>
+        </section>
       </section>
+
+      <ion-infinite-scroll
+        threshold="120px"
+        :disabled="!hasMore || loading || loadingMore"
+        @ionInfinite="handleInfinite"
+      >
+        <ion-infinite-scroll-content
+          loading-spinner="crescent"
+          :loading-text="t('home.loadingMore')"
+        />
+      </ion-infinite-scroll>
 
       <ion-toast
         :is-open="resultToastOpen"
@@ -111,7 +139,12 @@ import {
   IonContent,
   IonHeader,
   IonIcon,
+  IonInfiniteScroll,
+  IonInfiniteScrollContent,
+  IonItem,
   IonLabel,
+  IonList,
+  IonNote,
   IonPage,
   IonRefresher,
   IonRefresherContent,
@@ -122,14 +155,17 @@ import {
   IonToast,
   IonToolbar
 } from '@ionic/vue';
-import type { RefresherCustomEvent, SelectChangeEventDetail } from '@ionic/core';
-import { alertCircleOutline, cloudOfflineOutline, refreshOutline, warningOutline } from 'ionicons/icons';
+import type {
+  InfiniteScrollCustomEvent,
+  RefresherCustomEvent,
+  SelectChangeEventDetail
+} from '@ionic/core';
+import { cloudOfflineOutline, refreshOutline, warningOutline } from 'ionicons/icons';
 import { onMounted, computed, ref, onBeforeUnmount } from 'vue';
 import { useI18n } from 'vue-i18n';
-import QueueList from '@/components/QueueList.vue';
 import { usePendingQueue } from '@/composables/usePendingQueue';
 import { useResultSync } from '@/composables/useResultSync';
-import type { QueueMessage } from '@/types/queue';
+import type { QueueMessage, QueueMessageStatus } from '@/types/queue';
 
 const { t } = useI18n();
 
@@ -137,11 +173,14 @@ const {
   messages,
   meta,
   loading,
+  loadingMore,
+  hasMore,
   error,
   lastUpdated,
   usingMock,
   loadQueue,
   refreshQueue,
+  loadNextPage,
   startAutoRefresh
 } = usePendingQueue();
 
@@ -169,10 +208,6 @@ const resultToastMessage = computed(() => {
 
 const activeSegment = ref('all');
 
-const totalItems = computed(() => {
-  return messages.value.filter(x => x.status === 'pending').length;
-});
-
 type SegmentFilter = (message: QueueMessage) => boolean;
 interface SegmentDefinition {
   id: string;
@@ -192,8 +227,17 @@ const segmentDefinitions: SegmentDefinition[] = [
     labelKey: 'home.statuses.processing',
     filter: (message) => message.status === 'processing'
   },
-  { id: 'failed', labelKey: 'home.statuses.failed', filter: (message) => message.status === 'failed' }
+  {
+    id: 'failed',
+    labelKey: 'home.statuses.failed',
+    filter: (message) => message.status === 'failed'
+  }
 ];
+
+const totalItems = computed(() => messages.value.length);
+const pendingCount = computed(() => messages.value.filter((item: QueueMessage) => item.status === 'pending').length);
+const processingCount = computed(() => messages.value.filter((item: QueueMessage) => item.status === 'processing').length);
+const failedCount = computed(() => messages.value.filter((item: QueueMessage) => item.status === 'failed').length);
 
 const queueTabs = computed(() =>
   segmentDefinitions.map((segment) => ({
@@ -228,6 +272,21 @@ const lastUpdatedLabel = computed(() => {
   return t('home.hoursAgo', { count: diffHours });
 });
 
+const statusColor = (status: QueueMessageStatus): string => {
+  switch (status) {
+    case 'pending':
+      return 'primary';
+    case 'processing':
+      return 'warning';
+    case 'failed':
+      return 'danger';
+    case 'sent':
+      return 'success';
+    default:
+      return 'medium';
+  }
+};
+
 const handleFilterChange = (event: CustomEvent<SelectChangeEventDetail>) => {
   const next = event.detail.value as string;
   activeSegment.value = next;
@@ -240,6 +299,11 @@ const handleRefresh = async (event: RefresherCustomEvent) => {
 
 const handleManualRefresh = async () => {
   await refreshQueue(true);
+};
+
+const handleInfinite = async (event: InfiniteScrollCustomEvent) => {
+  await loadNextPage();
+  event.target.complete();
 };
 
 const handleRetryResultSync = async () => {
@@ -280,150 +344,143 @@ onBeforeUnmount(() => {
 
 <style scoped>
 ion-content {
-  --padding-top: 2.5rem;
-  --padding-bottom: calc(2rem + var(--app-safe-area-bottom, 0px));
-  --padding-start: clamp(1rem, 4vw, 3rem);
-  --padding-end: clamp(1rem, 4vw, 3rem);
-  background: radial-gradient(circle at top left, rgba(var(--ion-color-primary-rgb, 37, 99, 235), 0.25), transparent 45%),
-    var(--ion-background-color);
+  --padding-top: 1rem;
+  --padding-bottom: calc(1.5rem + var(--app-safe-area-bottom, 0px));
+  --padding-start: clamp(0.9rem, 3vw, 2rem);
+  --padding-end: clamp(0.9rem, 3vw, 2rem);
 }
 
-.dashboard-hero {
-  display: flex;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 1.5rem;
-  padding: 1.5rem;
-  border-radius: 0.95rem;
-  background: var(--dashboard-surface);
-  border: 1px solid var(--dashboard-border);
-  box-shadow: var(--dashboard-card-shadow);
-  margin-bottom: 1.5rem;
+.home-shell {
+  display: grid;
+  gap: 1rem;
 }
 
-.hero-text {
-  flex: 1 1 320px;
-}
-
-.hero-eyebrow {
-  margin: 0;
-  font-size: 0.9rem;
-  text-transform: uppercase;
-  letter-spacing: 0.15em;
-  color: var(--dashboard-text-secondary);
-}
-
-.hero-heading {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  flex-wrap: wrap;
-}
-
-.hero-heading h1 {
-  margin: 0.2rem 0;
-  font-size: clamp(1.8rem, 4vw, 2.4rem);
-}
-
-.hero-subtitle {
-  margin: 0.5rem 0 0;
-  color: var(--dashboard-text-secondary);
-  max-width: 520px;
-  line-height: 1.5;
-}
-
-.hero-actions {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  flex-wrap: wrap;
-}
-
-.hero-chip ion-icon {
-  margin-right: 0.35rem;
-}
-
-.panel {
-  padding: 1.5rem;
-}
-
-.panel-header {
+.home-hero {
   display: flex;
   justify-content: space-between;
   gap: 1rem;
   flex-wrap: wrap;
-  margin-bottom: 1rem;
+  padding: .75rem;
 }
 
-.panel-eyebrow {
+.hero-copy h2 {
+  margin: 0.3rem 0;
+}
+
+.hero-eyebrow {
   margin: 0;
-  font-size: 0.85rem;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
   color: var(--dashboard-text-secondary);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-size: 0.8rem;
 }
 
-.panel-header h3 {
-  margin: 0.15rem 0 0;
+.hero-subtitle {
+  margin: 0;
+  color: var(--dashboard-text-secondary);
+  max-width: 560px;
 }
 
-.panel-title-row {
+.hero-actions {
+  display: flex;
+  gap: 0.6rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.kpi-grid {
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+}
+
+.kpi-card {
+    padding: .75rem;
+}
+
+.kpi-card p {
+  margin: 0;
+  color: var(--dashboard-text-secondary);
+  font-size: 0.85rem;
+}
+
+.kpi-card strong {
+  display: block;
+  margin-top: 0.3rem;
+  font-size: 1.4rem;
+}
+
+.queue-toolbar {
+  --border-color: var(--ion-item-border-color, var(--ion-border-color, var(--ion-color-step-150, var(--ion-background-color-step-150, rgba(0, 0, 0, 0.13)))));  
   display: flex;
   align-items: flex-end;
   justify-content: space-between;
   gap: 0.75rem;
   flex-wrap: wrap;
+  margin-bottom: 0;
+  padding: .75rem;
+  border-bottom: 1px solid var(--border-color);
 }
 
 .queue-filter-select {
-  min-width: 210px;
-  max-width: min(280px, 100%);
-  --highlight-color-focused: var(--dashboard-success);
+  min-width: 220px;
 }
 
-.panel-updated {
+.queue-meta {
   display: flex;
-  align-items: center;
-  gap: 0.4rem;
-  font-size: 0.9rem;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.2rem;
   color: var(--dashboard-text-secondary);
 }
 
 .queue-notes {
-  margin-bottom: 1rem;
+  margin-bottom: 0.75rem;
 }
 
-.queue-list-section {
-  height: clamp(320px, 52vh, 640px);
-  min-height: 320px;
+.queue-list {
+  border-radius: 0.8rem;
+  overflow: hidden;
+  padding-top: 0;
+}
+
+.queue-item-label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.queue-item-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.queue-item-label p {
+  margin: 0;
+  color: var(--dashboard-text-secondary);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 .status-loading {
+  margin-top: 0.75rem;
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  font-size: 0.9rem;
   color: var(--dashboard-text-secondary);
 }
 
-@media (max-width: 640px) {
-  ion-content {
-    --padding-top: 1.5rem;
-  }
-
-  .dashboard-hero,
-  .panel {
-    padding: 1.25rem;
-  }
-
-  .panel-title-row {
-    align-items: stretch;
+@media (max-width: 680px) {
+  .queue-meta {
+    align-items: flex-start;
   }
 
   .queue-filter-select {
-    min-width: 0;
     width: 100%;
-    max-width: 100%;
   }
 }
 </style>

@@ -28,6 +28,11 @@ export interface SmsScheduleListResponse {
   raw: Record<string, unknown>;
 }
 
+export interface SmsScheduleListRequest {
+  page?: number;
+  per_page?: number;
+}
+
 export interface SmsScheduleDetailResponse {
   item: SmsScheduleRecord;
   raw: Record<string, unknown>;

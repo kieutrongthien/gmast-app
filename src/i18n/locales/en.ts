@@ -20,6 +20,9 @@ const en = {
     heroSubtitle:
       'Track KPIs, prioritize SIM usage, and react quickly to synchronization issues before they impact customers.',
     scanQueue: 'Scan Queue',
+    totalItems: 'Total',
+    pageInfo: 'Page {page}/{total}',
+    loadingMore: 'Loading more messages...',
     mockData: 'Mock data',
     apiError: 'API error',
     panelEyebrow: 'Priority Queue',
@@ -50,7 +53,7 @@ const en = {
         trend: '{count} high priority'
       },
       failed: {
-        label: 'Issues to Resolve',
+        label: 'Failed',
         support: 'Tap retry to synchronize',
         trend: '{count} waiting for retry'
       },
@@ -163,6 +166,8 @@ const en = {
     username: 'Username',
     email: 'Email',
     role: 'Role',
+    smsWakeWorkerLabel: 'Allow FCM wake processing',
+    smsWakeWorkerHint: 'When off, incoming FCM wake events will not start SmsWakeWorker.',
     unknownUser: 'Unknown',
     logout: 'Log out'
   },

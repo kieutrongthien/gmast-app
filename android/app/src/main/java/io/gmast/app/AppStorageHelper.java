@@ -13,6 +13,7 @@ public final class AppStorageHelper {
     public static final String SEND_CONFIG_KEY = "gmast::send-config";
     public static final String LOCALE_KEY = "gmast::locale";
     public static final String LAST_FCM_TOKEN_KEY = "gmast::last-fcm-token-native";
+    public static final String SMS_WAKE_WORKER_ENABLED_KEY = "gmast::sms-wake-worker-enabled";
 
     private AppStorageHelper() {}
 
@@ -94,6 +95,20 @@ public final class AppStorageHelper {
     public static void saveLastFcmToken(Context context, String token) {
         SharedPreferences storage = context.getSharedPreferences(CAPACITOR_STORAGE, Context.MODE_PRIVATE);
         storage.edit().putString(LAST_FCM_TOKEN_KEY, token).apply();
+    }
+
+    public static boolean isSmsWakeWorkerEnabled(Context context) {
+        SharedPreferences storage = context.getSharedPreferences(CAPACITOR_STORAGE, Context.MODE_PRIVATE);
+        String raw = trimToNull(storage.getString(SMS_WAKE_WORKER_ENABLED_KEY, null));
+        if (raw == null) {
+            return true;
+        }
+
+        String normalized = raw.toLowerCase();
+        return "1".equals(normalized)
+            || "true".equals(normalized)
+            || "yes".equals(normalized)
+            || "on".equals(normalized);
     }
 
     public static String trimToNull(String value) {

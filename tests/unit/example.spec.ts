@@ -10,7 +10,7 @@ const i18n = createI18n({
 });
 
 describe('HomePage.vue', () => {
-  it('mounts with queue list placeholder', () => {
+  it('renders queue title and hero section', () => {
     const wrapper = mount(HomePage, {
       global: {
         config: {
@@ -18,15 +18,11 @@ describe('HomePage.vue', () => {
             isCustomElement: (tag: string) => tag.startsWith('ion-')
           }
         },
-        stubs: {
-          'queue-list': {
-            template: '<div class="queue-list-stub">queue</div>'
-          }
-        },
         plugins: [i18n]
       }
     });
 
-    expect(wrapper.find('.queue-list-stub').exists()).toBe(true);
+    expect(wrapper.text()).toContain('Queue');
+    expect(wrapper.find('.home-hero').exists()).toBe(true);
   });
 });

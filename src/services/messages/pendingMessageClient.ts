@@ -22,6 +22,8 @@ export interface FetchFullQueueOptions extends Omit<FetchPendingMessagesOptions,
 
 const DEFAULT_MAX_PAGES = 20;
 
+type QueueApiRecord = Record<string, unknown>;
+
 const sanitizePageSize = (value: number): number => {
   if (!Number.isFinite(value)) {
     return appConfig.queue.defaultPageSize;
@@ -32,6 +34,9 @@ const sanitizePageSize = (value: number): number => {
   }
   return Math.min(coerced, appConfig.queue.maxPageSize);
 };
+
+const asRecord = (value: unknown): Record<string, unknown> =>
+  value && typeof value === 'object' && !Array.isArray(value) ? (value as Record<string, unknown>) : {};
 
 const toPriority = (value?: string | number | null): QueueMessagePriority => {
   if (typeof value === 'number' && Number.isFinite(value)) {
@@ -106,8 +111,6 @@ const toTags = (value: unknown): string[] => {
   return value.filter((item): item is string => typeof item === 'string' && item.trim().length > 0);
 };
 
-type QueueApiRecord = Record<string, unknown>;
-
 const readString = (record: QueueApiRecord, ...keys: string[]): string | null => {
   for (const key of keys) {
     const value = record[key];
@@ -180,22 +183,47 @@ const normalizeRecord = (record: QueueApiRecord): QueueMessage => {
 };
 
 const buildMeta = (
-  allItemsCount: number,
+  totalItems: number,
   page: number,
-  pageSize: number
+  pageSize: number,
+  totalPages: number,
+  hasNextPage: boolean
 ): QueuePageMeta => {
-  const totalPages = Math.max(1, Math.ceil(allItemsCount / pageSize));
-  const hasNextPage = page < totalPages;
   const fetchedAt = new Date().toISOString();
 
   return {
     page,
     pageSize,
     totalPages,
-    totalItems: allItemsCount,
+    totalItems,
     hasNextPage,
     fetchedAt
   };
+};
+
+const deriveMetaFromPayload = (
+  payload: Record<string, unknown>,
+  page: number,
+  pageSize: number,
+  currentCount: number
+): QueuePageMeta => {
+  const directMeta = asRecord(payload.meta);
+  const nestedMeta = asRecord(asRecord(payload.data).meta);
+  const metaSource = Object.keys(directMeta).length > 0 ? directMeta : nestedMeta;
+
+  const metaPage = readPositiveInteger(metaSource, 'page') ?? page;
+  const metaPageSize = readPositiveInteger(metaSource, 'per_page', 'pageSize', 'perPage') ?? pageSize;
+  const metaTotalItems = readPositiveInteger(metaSource, 'total', 'totalItems', 'count') ?? currentCount;
+  const totalPages =
+    readPositiveInteger(metaSource, 'totalPages', 'last_page')
+    ?? Math.max(1, Math.ceil(metaTotalItems / Math.max(1, metaPageSize)));
+
+  const hasNextExplicit = metaSource.hasOwnProperty('hasNext')
+    ? Boolean(metaSource.hasNext)
+    : (metaSource.hasOwnProperty('hasMore') ? Boolean(metaSource.hasMore) : null);
+
+  const hasNextPage = hasNextExplicit === null ? metaPage < totalPages : hasNextExplicit;
+  return buildMeta(metaTotalItems, metaPage, metaPageSize, totalPages, hasNextPage);
 };
 
 const requestPendingMessages = async (
@@ -206,15 +234,12 @@ const requestPendingMessages = async (
     throw new Error('VITE_API_BASE_URL is not configured.');
   }
 
-  const { items } = await withRetry(() => getSmsSchedules());
+  const { items, raw } = await withRetry(() => getSmsSchedules(undefined, { page, per_page: pageSize }));
   const normalized = items.map((item) => normalizeRecord(item as QueueApiRecord));
-  const startIndex = Math.max(0, (page - 1) * pageSize);
-  const endIndex = startIndex + pageSize;
-  const messages = normalized.slice(startIndex, endIndex);
-  const meta = buildMeta(normalized.length, page, pageSize);
+  const meta = deriveMetaFromPayload(raw, page, pageSize, normalized.length);
 
   return {
-    messages,
+    messages: normalized,
     meta,
     updatedAt: meta.fetchedAt
   };
@@ -277,8 +302,8 @@ export const fetchFullPendingQueue = async (
       ...latestMeta,
       page: 1,
       pageSize,
-      totalItems: aggregatedMessages.length,
-      hasNextPage: latestMeta.hasNextPage && currentPage < maxPages + 1,
+      totalItems: latestMeta.totalItems || aggregatedMessages.length,
+      hasNextPage: false,
       fetchedAt: updatedAt
     };
   }

@@ -11,6 +11,7 @@ import type {
   SaveFcmTokenRequest,
   SaveFcmTokenResponse,
   SmsScheduleDetailResponse,
+  SmsScheduleListRequest,
   SmsScheduleListResponse,
   SmsScheduleRecord,
   SmsScheduleStatusUpdateRequest,
@@ -202,9 +203,23 @@ export const getMobileUserInfo = async (token?: string): Promise<MobileUserInfoR
   };
 };
 
-export const getSmsSchedules = async (token?: string): Promise<SmsScheduleListResponse> => {
+export const getSmsSchedules = async (
+  token?: string,
+  options: SmsScheduleListRequest = {}
+): Promise<SmsScheduleListResponse> => {
   const headers = await resolveAuthHeaders(token);
-  const { data } = await httpClient.get<Record<string, unknown>>(SMS_SCHEDULES_ENDPOINT, { headers });
+  const params: Record<string, number> = {};
+  if (typeof options.page === 'number' && Number.isFinite(options.page) && options.page > 0) {
+    params.page = Math.trunc(options.page);
+  }
+  if (typeof options.per_page === 'number' && Number.isFinite(options.per_page) && options.per_page > 0) {
+    params.per_page = Math.trunc(options.per_page);
+  }
+
+  const { data } = await httpClient.get<Record<string, unknown>>(SMS_SCHEDULES_ENDPOINT, {
+    headers,
+    params
+  });
   const raw = asRecord(data);
 
   return {

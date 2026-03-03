@@ -13,11 +13,13 @@
           <p>{{ t('setting.description') }}</p>
 
           <div class="setting-group">
+            <ion-label>
+              <h3>{{ t('setting.languageLabel') }}</h3>
+            </ion-label>
             <ion-select
               :value="currentLocale"
               class="language-select"
               interface="popover"
-              :label="t('setting.languageLabel')"
               label-placement="stacked"
               @ionChange="handleLocaleChange"
             >
@@ -27,18 +29,17 @@
           </div>
 
           <div class="setting-group">
-            <ion-input
-              readonly
-              label="Display Name"
-              :value="displayName"
-              label-placement="stacked"
-            />
-            <ion-input
-              readonly
-              label="Username"
-              :value="displayUsername"
-              label-placement="stacked"
-            />
+            <ion-item lines="none" class="toggle-item">
+              <ion-label>
+                <h3>{{ t('setting.smsWakeWorkerLabel') }}</h3>
+                <p>{{ t('setting.smsWakeWorkerHint') }}</p>
+              </ion-label>
+              <ion-toggle
+                slot="end"
+                :checked="smsWakeWorkerEnabled"
+                @ionChange="handleSmsWakeWorkerToggle"
+              />
+            </ion-item>
           </div>
           
           <div class="setting-group">
@@ -58,23 +59,32 @@ import {
   IonButton,
   IonContent,
   IonHeader,
+  IonItem,
+  IonLabel,
   IonPage,
   IonSelect,
   IonSelectOption,
+  IonToggle,
   IonTitle,
   IonToolbar,
   IonInput
 } from '@ionic/vue';
 import type { SelectChangeEventDetail } from '@ionic/core';
+import { onMounted, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useRouter } from 'vue-router';
 import type { AppLocale } from '@/i18n/types';
 import { setSavedLocale } from '@/services/settings/languageService';
+import {
+  getSmsWakeWorkerEnabled,
+  setSmsWakeWorkerEnabled
+} from '@/services/settings/smsWakeWorkerSettingService';
 import { authStore } from '@/stores/authStore';
 
 const { t, locale } = useI18n();
 const router = useRouter();
 const currentLocale = computed(() => locale.value as AppLocale);
+const smsWakeWorkerEnabled = ref(true);
 
 const pickString = (value: unknown): string | null => {
   if (typeof value === 'string' && value.trim().length > 0) {
@@ -120,10 +130,21 @@ const handleLocaleChange = async (event: CustomEvent<SelectChangeEventDetail>) =
   await setSavedLocale(value);
 };
 
+const handleSmsWakeWorkerToggle = async (event: CustomEvent<{ checked: boolean }>) => {
+  const checked = Boolean(event.detail?.checked);
+
+  smsWakeWorkerEnabled.value = checked;
+  await setSmsWakeWorkerEnabled(checked);
+};
+
 const handleLogout = async (): Promise<void> => {
   await authStore.logout();
   await router.replace('/login');
 };
+
+onMounted(async () => {
+  smsWakeWorkerEnabled.value = await getSmsWakeWorkerEnabled();
+});
 </script>
 
 <style scoped>
@@ -150,6 +171,24 @@ ion-content {
 
 .setting-group {
   margin-top: 0.5rem;
+}
+
+.toggle-item {
+  --inner-padding-end: 0;
+  --padding-start: 0;
+  --background: transparent;
+  align-items: flex-start;
+}
+
+ion-label h3 {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.toggle-item ion-label p {
+  margin: 0.25rem 0 0;
+  font-size: 0.9rem;
 }
 
 .setting-group-title {
