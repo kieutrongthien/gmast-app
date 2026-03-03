@@ -120,7 +120,7 @@ ion-content {
 }
 
 .setting-content {
-  padding: 1.5rem 1rem;
+  padding: 1rem;
 }
 
 .setting-content .dashboard-panel-card {
