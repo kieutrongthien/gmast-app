@@ -58,11 +58,10 @@ body {
   color: var(--ion-text-color);
 }
 
-ion-card,
-ion-toolbar,
-ion-header,
-ion-content {
-  --background: transparent;
+ion-header {
+  box-shadow: none !important;
+  -webkit-box-shadow: none !important;
+  border-bottom: 1px solid var(--dashboard-border);
 }
 
 ion-header ion-toolbar {

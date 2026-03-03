@@ -28,6 +28,6 @@ ion-content {
 }
 
 .sim-page-content {
-  padding: 1.5rem 1rem;
+  padding: 1rem 1rem;
 }
 </style>

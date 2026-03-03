@@ -16,16 +16,20 @@
             <ion-label>
               <h3>{{ t('setting.languageLabel') }}</h3>
             </ion-label>
-            <ion-select
+            <ion-radio-group
               :value="currentLocale"
-              class="language-select"
-              interface="popover"
-              label-placement="stacked"
+              class="language-radio-group"
               @ionChange="handleLocaleChange"
             >
-              <ion-select-option value="en">{{ t('setting.languageEnglish') }}</ion-select-option>
-              <ion-select-option value="ko">{{ t('setting.languageKorean') }}</ion-select-option>
-            </ion-select>
+              <ion-item lines="none" class="language-option">
+                <ion-radio slot="start" value="en" />
+                <ion-label>{{ t('setting.languageEnglish') }}</ion-label>
+              </ion-item>
+              <ion-item lines="none" class="language-option">
+                <ion-radio slot="start" value="ko" />
+                <ion-label>{{ t('setting.languageKorean') }}</ion-label>
+              </ion-item>
+            </ion-radio-group>
           </div>
 
           <div class="setting-group">
@@ -54,7 +58,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, onMounted, ref } from 'vue';
 import {
   IonButton,
   IonContent,
@@ -62,14 +66,13 @@ import {
   IonItem,
   IonLabel,
   IonPage,
-  IonSelect,
-  IonSelectOption,
+  IonRadio,
+  IonRadioGroup,
   IonToggle,
   IonTitle,
   IonToolbar
 } from '@ionic/vue';
-import type { SelectChangeEventDetail } from '@ionic/core';
-import { onMounted, ref } from 'vue';
+import type { RadioGroupChangeEventDetail } from '@ionic/core';
 import { useI18n } from 'vue-i18n';
 import { useRouter } from 'vue-router';
 import type { AppLocale } from '@/i18n/types';
@@ -85,7 +88,7 @@ const router = useRouter();
 const currentLocale = computed(() => locale.value as AppLocale);
 const smsWakeWorkerEnabled = ref(true);
 
-const handleLocaleChange = async (event: CustomEvent<SelectChangeEventDetail>) => {
+const handleLocaleChange = async (event: CustomEvent<RadioGroupChangeEventDetail>) => {
   const value = event.detail.value;
   if (value !== 'en' && value !== 'ko') {
     return;
@@ -168,8 +171,19 @@ ion-label h3 {
   margin: 0.2rem 0;
 }
 
-.language-select {
-  max-width: 100%;
-  --highlight-color-focused: var(--dashboard-success);
+.language-radio-group {
+  display: block;
+  margin-top: 0.25rem;
+}
+
+.language-option {
+  --padding-start: 0;
+  --inner-padding-end: 0;
+  --background: transparent;
+}
+
+.language-option ion-radio {
+  --color: var(--ion-color-primary-tint);
+  --color-checked: var(--ion-color-primary);
 }
 </style>
